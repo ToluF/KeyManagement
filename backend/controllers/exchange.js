@@ -37,7 +37,7 @@ exports.assignKey = async (req, res) => {
         // Create transaction
         const transaction = new Transaction({
             key: keyId,
-            user: req.user.id, // Admin who performed the action
+            user: userId, // Admin who performed the action
             action: 'checkout',
             notes: `Assigned to ${user.name} (${user.email})`
         });
@@ -56,12 +56,13 @@ exports.returnKey = async (req, res) => {
     const key = await Key.findById(keyId);
     if (!key) return res.status(404).json({ error: 'Key not found' });
 
+    const assignedUser = await User.findById(key.assignedTo);
     // Create transaction first
     const transaction = new Transaction({
       key: keyId,
       user: req.user.id,
       action: 'return',
-      notes: `Returned by ${key.assignedTo.name}`
+      notes: `Returned by ${assignedUser?.name || 'Unknown'}` // Prevent crash if user data is missing
     });
     
     // Update key status
@@ -107,13 +108,57 @@ exports.markKeyLost = async (req, res) => {
 };
 
 exports.getKeyHistory = async (req, res) => {
-    try {
-      const history = await Transaction.find({ key: req.params.keyId })
-        .populate('user', 'name email')
-        .sort('-timestamp');
-        
-      res.json(history);
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  };
+  try {
+    const history = await Transaction.find({ key: req.params.keyId })
+      .populate('user', 'name email')
+      .sort('-timestamp');
+      
+    res.json(history);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+exports.getAnalyticsData = async (req, res) => {
+  try {
+    const [users, keys, transactions] = await Promise.all([
+      User.find().select('-password').lean(),
+      Key.find().populate('assignedTo', 'name email department').lean(),
+      Transaction.find().populate('user', 'name').sort('-timestamp').limit(5).lean()
+    ]);
+
+    // Compute statistics
+    const totalKeys = keys.length;
+    const availableKeys = keys.filter(k => k.status === 'available').length;
+    const issuedKeys = keys.filter(k => k.assignedTo).length;
+    const lostKeys = keys.filter(k => k.status === 'lost').length;
+
+    // Status distribution for chart
+    const statusDistribution = [
+      { label: 'Available', value: availableKeys },
+      { label: 'Issued', value: issuedKeys },
+      { label: 'Lost', value: lostKeys }
+    ];
+
+    // Recent checkouts (last 5 transactions with 'checkout' action)
+    const recentActivity = transactions
+      .filter(t => t.action === 'checkout')
+      .map(t => ({
+        userName: t.user.name,
+        keyName: keys.find(k => k._id.toString() === t.key.toString())?.name || 'Unknown Key',
+        timestamp: t.timestamp
+      }));
+
+    res.json({
+      totalKeys,
+      availableKeys,
+      issuedKeys,
+      lostKeys,
+      statusDistribution,
+      recentActivity
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

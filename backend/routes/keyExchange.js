@@ -8,5 +8,6 @@ router.post('/assign', protect, admin, exchangeController.assignKey);
 router.post('/return', protect, admin, exchangeController.returnKey);
 router.post('/mark-lost', protect, admin, exchangeController.markKeyLost);
 router.get('/history/:keyId', exchangeController.getKeyHistory);
+router.get('/analytics', exchangeController.getAnalyticsData);
 
 module.exports = router;

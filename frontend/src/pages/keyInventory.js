@@ -8,6 +8,7 @@ export default function Keys() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedKey, setSelectedKey] = useState(null);
   const [editKey, setEditKey] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchKeys();
@@ -64,8 +65,15 @@ export default function Keys() {
     }
   };
 
+    // Filter keys based on search input
+  const filteredKeys = keys.filter(
+    (key) =>
+      key.keyCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      key.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <div>
+    <div className="max-w-5xl mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Inventory</h1>
         <button
@@ -74,6 +82,17 @@ export default function Keys() {
         >
           Add New Key
         </button>
+      </div>
+
+      {/* Search Bar */}
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Search by key code or description..."
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
       </div>
 
       <AddKey
@@ -100,38 +119,42 @@ export default function Keys() {
       <div className="bg-white p-6 rounded-lg shadow-sm">
         <h2 className="text-lg font-medium mb-4">All Keys</h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {keys.map(key => (
-            <div key={key._id} className="p-4 border rounded-lg">
-              <h3 className="font-medium text-lg">{key.keyCode}</h3>
-              <p className="text-gray-600 mt-2">{key.description}</p>
-              <div className="mt-2 flex justify-between items-center">
-                <span className="text-sm bg-gray-100 px-2 py-1 rounded">
-                  {key.location}
-                </span>
-                <span className={`text-sm font-medium ${
-                  key.status === 'available' 
-                    ? 'text-green-600' 
-                    : 'text-orange-600'
-                }`}>
-                  {key.status.toUpperCase()}
-                </span>
+          {filteredKeys.length > 0 ? (
+            filteredKeys.map((key) => (
+              <div key={key._id} className="p-5 border rounded-lg shadow-sm bg-gray-50">
+                <h3 className="font-semibold text-lg text-gray-800">{key.keyCode}</h3>
+                <p className="text-gray-600 mt-2">{key.description}</p>
+                <div className="mt-2 flex justify-between items-center">
+                  <span className="text-sm bg-gray-200 px-3 py-1 rounded-full">
+                    {key.location}
+                  </span>
+                  <span className={`text-sm font-semibold px-3 py-1 rounded-full ${
+                    key.status === 'available' 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-orange-100 text-orange-700'
+                  }`}>
+                    {key.status.toUpperCase()}
+                  </span>
+                </div>
+                <div className="mt-4 flex gap-4">
+                  <button
+                    onClick={() => setEditKey(key)}
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => setSelectedKey(key._id)}
+                    className="mt-2 text-sm text-blue-600 hover:underline"
+                  >
+                    View History
+                  </button>
+                </div>
               </div>
-              <div className="mt-2 flex gap-2">
-                <button
-                  onClick={() => setEditKey(key)}
-                  className="text-sm text-blue-600 hover:underline"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => setSelectedKey(key._id)}
-                  className="mt-2 text-sm text-blue-600 hover:underline"
-                >
-                  View History
-                </button>
-              </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="text-gray-500">No matching keys found.</p>
+          )}
         </div>
       </div>
     </div>

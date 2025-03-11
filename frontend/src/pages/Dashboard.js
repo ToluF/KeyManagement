@@ -6,12 +6,28 @@ import KeyStatusChart from '../components/charts/KeyStatusChart';
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
-    totalKeys: 5,
-    availableKeys: 3,
-    issuedKeys: 2,
+    totalKeys: 0,
+    availableKeys: 0,
+    issuedKeys: 0,
+    statusDistribution: [],
     recentActivity: []
   });
-  const { logout } = useAuth();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch('/api/exchange/analytics');
+        if (!res.ok) throw new Error('Failed to fetch data');
+        const data = await res.json();
+        setStats(data);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+  
+    fetchData();
+  }, []);
+
 
   // useEffect(() => {
   //   const fetchData = async () => {
@@ -26,12 +42,6 @@ export default function Dashboard() {
     <div>
       <header className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <button
-          onClick={logout}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-        >
-          Logout
-        </button>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -59,7 +69,10 @@ export default function Dashboard() {
         
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <h3 className="text-lg font-medium mb-4">Recent Checkouts</h3>
-          <KeyStatusChart data={stats.recentCheckouts} />
+          <KeyStatusChart data={stats.recentActivity.map(activity => ({
+            label: activity.userName,
+            value: 1 // Dummy value
+          }))} />
         </div>
       </div>
     </div>
@@ -67,39 +80,3 @@ export default function Dashboard() {
 
 }
 
-// // src/pages/Dashboard.js
-// import React from 'react';
-//
-
-
-// const Dashboard = () => {
-//   return (
-//     <div className="dashboard">
-//       <header>
-//         <h1>Key Management Dashboard</h1>
-//         <nav>
-//           <ul>
-//             <li>
-//               <Link to="/inventory">Inventory</Link>
-//             </li>
-//             <li>
-//               <Link to="/exchange">Key Exchange</Link>
-//             </li>
-//             <li>
-//               <Link to="/audit">Audit Log</Link>
-//             </li>
-//             <li>
-//               <Link to="/add-key">Add Key</Link>
-//             </li>
-//           </ul>
-//         </nav>
-//       </header>
-//       <main>
-//         <h2>Welcome to the Key Management System</h2>
-//         <p>Select an option from the menu above to manage keys.</p>
-//       </main>
-//     </div>
-//   );
-// };
-
-// export default Dashboard;

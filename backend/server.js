@@ -14,6 +14,7 @@ const exchangeRoutes = require('./routes/keyExchange');
 const lookupsRoute = require("./routes/lookups")
 const auditRoutes = require('./routes/audit');
 const settingsRoutes = require('./routes/settings');
+const Key = require('./models/keys'); // Assuming Mongoose models
 // const analyticsRoutes = require('./routes/analyticsRoutes');
 
 const app = express();
@@ -75,6 +76,44 @@ connectDB().then(() => {
       res.status(400).json({ error: error.message });
     }
   });
+
+  // app.get('/analytics', async (req, res) => {
+  //   try {
+  //     const keys = await Key.find();
+  //     const users = await User.find();
+  
+  //     // Compute statistics
+  //     const totalKeys = keys.length;
+  //     const availableKeys = keys.filter(k => k.status === 'available').length;
+  //     const issuedKeys = keys.filter(k => k.assignedTo).length;
+  
+  //     // Status distribution for the chart
+  //     const statusDistribution = [
+  //       { label: 'Available', value: availableKeys },
+  //       { label: 'Issued', value: issuedKeys },
+  //       { label: 'Lost', value: keys.filter(k => k.status === 'lost').length }
+  //     ];
+  
+  //     // Fetch recent checkouts (last 5 transactions)
+  //     const recentActivity = keys
+  //       .filter(k => k.assignedTo)
+  //       .slice(-5) // Assuming the latest transactions are at the end
+  //       .map(k => ({
+  //         userName: users.find(u => u._id.toString() === k.assignedTo.toString())?.name || 'Unknown',
+  //         keyName: k.name
+  //       }));
+  
+  //     res.json({
+  //       totalKeys,
+  //       availableKeys,
+  //       issuedKeys,
+  //       statusDistribution,
+  //       recentActivity
+  //     });
+  //   } catch (error) {
+  //     res.status(500).json({ error: 'Server error' });
+  //   }
+  // });
 
   // Error handling middleware
   app.use((err, req, res, next) => {
