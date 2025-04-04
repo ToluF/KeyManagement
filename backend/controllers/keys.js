@@ -1,4 +1,6 @@
 const Key = require('../models/keys');
+const Transaction = require('../models/transaction');
+const mongoose = require('mongoose');
 
 exports.addKey = async (req, res) => {
   try {
@@ -71,8 +73,15 @@ exports.searchKeys = async (req, res) => {
 exports.getKeyHistory = async (req, res) => {
   try {
     const key = await Key.findById(req.params.id)
-      .populate('history.user', 'name email role')
-      .select('history')
+      .populate({
+        path: 'transactionHistory.transaction',
+        select: 'transactionId checkoutDate',
+        populate: {
+          path: 'user issuer',
+          select: 'name email role'
+        }
+      })
+      .select('transactionHistory')
       .lean()
       .exec();
     
@@ -80,30 +89,83 @@ exports.getKeyHistory = async (req, res) => {
       return res.status(404).json({ error: 'Key not found' });
     }
 
-    res.json(key.history);
+    
+    // Transform the data for better client-side consumption
+    const history = key.transactionHistory.map(entry => ({
+      action: entry.status,
+      date: entry.date,
+      user: entry.transaction?.user?.name || 'System',
+      transactionId: entry.transaction?.transactionId,
+      performedBy: entry.transaction?.issuer?.name
+    }));
+
+    res.json(history);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
 exports.updateKey = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { id } = req.params;
     const updates = req.body;
 
-    const updatedKey = await Key.findByIdAndUpdate(
-      id,
-      updates,
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedKey) {
+    // Prevent manual status overrides
+    const key = await Key.findById(id).session(session);
+    if (!key) {
+      await session.abortTransaction();
       return res.status(404).json({ error: 'Key not found' });
     }
 
+    // Check for active transactions
+    const activeTransaction = await Transaction.findOne({
+      'items.key': id,
+      status: 'active'
+    }).session(session);
+
+    if (activeTransaction) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        error: `Key is part of active transaction ${activeTransaction.transactionId}`
+      });
+    }
+
+    // Validate status transitions
+    const validTransitions = {
+      'available': ['checked-out', 'lost'],
+      'checked-out': ['available', 'lost'],
+      'lost': ['available']
+    };
+
+    if (updates.status && !validTransitions[key.status]?.includes(updates.status)) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        error: `Invalid status transition: ${key.status} → ${updates.status}`
+      });
+    }
+
+    const updatedKey = await Key.findByIdAndUpdate(
+      id,
+      {
+        ...updates,
+        // Force clear transaction reference when marking available
+        currentTransaction: updates.status === 'available' ? null : key.currentTransaction
+      },
+      { new: true, runValidators: true, session }
+    );
+
+    await session.commitTransaction();
     res.json(updatedKey);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    await session.abortTransaction();
+    res.status(400).json({ error: error.message,
+      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+    });
+  } finally {
+    session.endSession();
   }
 };
 

@@ -19,9 +19,20 @@ const protect = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
     res.status(401).json({ error: 'Not authorized' });
   }
+};
+
+// New role-based middleware (replaces admin middleware)
+const role = (...allowedRoles) => {
+  return (req, res, next) => {
+    if (!allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({
+        error: `Role ${req.user.role} not authorized for this resource`
+      });
+    }
+    next();
+  };
 };
 
 const admin = (req, res, next) => {
@@ -32,4 +43,4 @@ const admin = (req, res, next) => {
   }
 };
 
-module.exports = { protect, admin };
+module.exports = { protect, role, admin };

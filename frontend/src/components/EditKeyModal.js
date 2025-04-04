@@ -1,16 +1,71 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect  } from 'react';
 
 const EditKeyModal = ({ keyData, onClose, onSave }) => {
-  const [formData, setFormData] = useState(keyData);
+  const [formData, setFormData] = useState({
+    ...keyData,
+    status: keyData.status || 'available'
+  });
   const [error, setError] = useState('');
+
+  // useEffect(() => {
+  //   const checkStatus = async () => {
+  //     try {
+  //       const res = await fetch(`/api/transactions/${keyData._id}/verify-key-status`);
+  //       const data = await res.json();
+        
+  //       if (data.currentTransaction) {
+  //         setError('Key is currently checked out - cannot edit status');
+  //       }
+  //     } catch (error) {
+  //       console.error('Status check failed:', error);
+  //     }
+  //   };
+    
+  //   checkStatus();
+  // }, [keyData._id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await onSave(formData);
+      // Clear error on new submission
+      setError('');
+
+      // Clear transaction reference if marking available
+      const updates = { 
+        ...formData,
+        currentTransaction: formData.status === 'available' ? null : formData.currentTransaction
+      };
+
+      
+      // Remove internal fields
+      // delete updates._id;
+      delete updates.__v;
+      delete updates.createdAt;
+
+      await onSave(updates);
     } catch (error) {
       setError(error.message);
     }
+  };
+
+  const handleStatusChange = (newStatus) => {
+    const validTransitions = {
+      'available': ['checked-out', 'lost'],
+      'checked-out': ['available', 'lost'],
+      'lost': ['available']
+    };
+  
+    if (!validTransitions[formData.status].includes(newStatus)) {
+      setError(`Invalid status transition: ${formData.status} → ${newStatus}`);
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      status: newStatus,
+      // Clear transaction reference when marking available
+      currentTransaction: newStatus === 'available' ? null : prev.currentTransaction
+    }));
   };
 
   return (
@@ -22,6 +77,16 @@ const EditKeyModal = ({ keyData, onClose, onSave }) => {
         </div>
         {error && <p className="text-red-500 mb-2">{error}</p>}
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* <select
+            value={formData.status}
+            onChange={(e) => handleStatusChange(e.target.value)}
+            className="w-full p-2 border rounded"
+          >
+            <option value="available">Available</option>
+            <option value="checked-out">Checked Out</option>
+            <option value="lost">Lost</option>
+          </select> */}
+
           <input
             type="text"
             placeholder="Key Code"

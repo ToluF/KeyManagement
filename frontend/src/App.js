@@ -17,6 +17,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/register';
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
+import Report from './pages/ReportsPage';
 // import Settings from './pages/Settings';
 
 
@@ -57,6 +58,7 @@ function App() {
               <Route path="/exchange" element={<KeyExchangeStatus />} />
               <Route path="/users" element={<Users />} />
               <Route path="/audit" element={<AuditLog />} />
+              <Route path="/reports" element={<Report />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
           </Route>

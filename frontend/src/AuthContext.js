@@ -47,18 +47,17 @@ export function AuthProvider({ children }) {
         body: JSON.stringify({ email, password }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Login failed');
+      const data = await response.json();
+      if (!response.ok || !data.token) {
+        throw new Error(data.error || 'Login failed');
       }
 
-      const { token, user } = await response.json();
       
       // Store both token and user
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
-      setUser(user);
-      navigate('/dashboard'); // Navigate to the desired page
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      setUser(data.user);
+      navigate(data.user.role === 'admin' ? '/dashboard' : '/exchange'); // Navigate to the desired page
       
       return true;
     } catch (error) {

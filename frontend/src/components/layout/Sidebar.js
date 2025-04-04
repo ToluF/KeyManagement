@@ -8,6 +8,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
     { name: 'Audit Log', href: '/audit', icon: KeyIcon },
     // { name: 'Add Key', href: '/add-key', icon: KeyIcon },
     { name: 'Users', href: '/users', icon: UserGroupIcon },
+    { name: 'Reports', href: '/reports', icon: KeyIcon },
     { name: 'Settings', href: '/settings', icon: CogIcon },
   ];
 

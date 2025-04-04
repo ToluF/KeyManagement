@@ -1,6 +1,6 @@
 const Key = require('../models/keys');
 const User = require('../models/user');
-const Transaction = require('../models/exchangeTransaction');
+const Transaction = require('../models/transaction');
 
 exports.getExchangeData = async (req, res) => {
   try {

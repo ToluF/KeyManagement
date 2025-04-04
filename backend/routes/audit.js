@@ -6,7 +6,7 @@ const AuditLog = require('../models/auditLog');
 router.get('/', async (req, res) => {
   try {
     const { page = 1, actionType, userId, startDate, endDate } = req.query;
-    const limit = 20;
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const skip = (page - 1) * limit;
 
     const query = {};
@@ -28,11 +28,17 @@ router.get('/', async (req, res) => {
     ]);
 
     res.json({
-      logs,
-      totalPages: Math.ceil(total / limit)
+      logs: logs.map(log => ({
+        ...log._doc,
+        _id: log._id.toString(),
+        timestamp: log.timestamp.toISOString()
+      })) || [],
+      totalPages: Math.ceil(total / limit) || 1
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message,
+      logs: [],
+      totalPages: 1 });
   }
 });
 

@@ -10,10 +10,12 @@ const User = require('./models/user');
 const keyRoutes = require('./routes/key');
 const userRoutes = require('./routes/users');
 const loginRoutes = require('./routes/loginRoute');
-const exchangeRoutes = require('./routes/keyExchange');
+// const exchangeRoutes = require('./routes/keyExchange');
 const lookupsRoute = require("./routes/lookups")
 const auditRoutes = require('./routes/audit');
 const settingsRoutes = require('./routes/settings');
+const transactions = require('./routes/transactionRoutes');
+const reports = require('./routes/reports');
 const Key = require('./models/keys'); // Assuming Mongoose models
 // const analyticsRoutes = require('./routes/analyticsRoutes');
 
@@ -34,9 +36,12 @@ connectDB().then(() => {
   app.use('/api/keys', keyRoutes);
   app.use('/api/lookups', lookupsRoute);
   app.use('/api/users', userRoutes);
-  app.use('/api/exchange', exchangeRoutes);
+  // app.use('/api/exchange', exchangeRoutes);
   app.use('/api/audit', auditRoutes);
   app.use('/api/settings', settingsRoutes);
+  // New transaction system
+  app.use('/api/transactions', transactions);
+  app.use('/api/reports', reports);
 
   // Health check
   app.get('/api/health', (req, res) => {

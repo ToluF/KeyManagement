@@ -9,7 +9,11 @@ const KeyHistoryModal = ({ keyId, onClose }) => {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const res = await fetch(`/api/exchange/history/${keyId}`);
+        const res = await fetch(`/api/keys/${keyId}/history`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
         if (!res.ok) throw new Error('Failed to fetch history');
         const data = await res.json();
         setHistory(data);
@@ -63,7 +67,7 @@ const KeyHistoryModal = ({ keyId, onClose }) => {
               {history.map((transaction, index) => (
                 <tr key={index} className="border-t">
                   <td className="px-4 py-2">
-                    {new Date(transaction.timestamp).toLocaleDateString('en-US', {
+                    {new Date(transaction.date).toLocaleDateString('en-US', {
                       year: 'numeric',
                       month: 'short',
                       day: 'numeric',

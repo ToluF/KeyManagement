@@ -30,17 +30,19 @@ exports.signup = async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    // Check if user exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    // Prevent user role registration via this endpoint
+    if (await User.findOne({ email })) {
       return res.status(400).json({ error: 'User already exists' });
     }
 
+    // Only allow admin creation through specific email
+    const role = email === 'admin@keymaster.com' ? 'admin' : 'issuer';
+    
     // Create new user
     const newUser = await User.create({
       email,
       password,
-      role: email === 'admin@keymaster.com' ? 'admin' : 'user'
+      role
     });
 
     // Generate JWT
@@ -72,15 +74,15 @@ exports.login = async (req, res) => {
 
     const user = await User.findOne({ email });
     
-    if (!user) {
+    if (!user|| !(await user.matchPassword(password))) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Verify password
-    const validPassword = await user.matchPassword(password);
-    
-    if (!validPassword) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+    // Only issue tokens to admin/issuer
+    if (!['admin', 'issuer'].includes(user.role)) {
+      return res.status(403).json({ 
+        error: 'System access requires admin/issuer privileges' 
+      });
     }
 
     // Create JWT token
@@ -91,7 +93,6 @@ exports.login = async (req, res) => {
     );
 
     res.json({
-      status: 'success',
       token,
       user: {
         id: user._id,
@@ -107,8 +108,8 @@ exports.login = async (req, res) => {
 
 exports.verifyToken = async (req, res) => {
   try {
-    console.log('Authorization header:', req.headers.authorization);
-    console.log('Received token:', req.headers.authorization?.split(' ')[1]);
+    // console.log('Authorization header:', req.headers.authorization);
+    // console.log('Received token:', req.headers.authorization?.split(' ')[1]);
     // Get token from header
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ error: 'No token provided' });

@@ -46,18 +46,26 @@ export default function Keys() {
       throw error;
     }
   };
-
+  
+  // pages/Keys.js
   const handleUpdateKey = async (updatedKey) => {
     try {
       const res = await fetch(`/api/keys/${updatedKey._id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
         body: JSON.stringify(updatedKey)
       });
+
+      const responseData = await res.json();
       
-      if (!res.ok) throw new Error('Failed to update key');
-      
-      setKeys(keys.map(k => k._id === updatedKey._id ? updatedKey : k));
+      if (!res.ok) {
+        throw new Error(responseData.error || 'Failed to update key');
+      }
+
+      setKeys(keys.map(k => k._id === updatedKey._id ? responseData : k));
       setEditKey(null);
     } catch (error) {
       console.error('Update error:', error);

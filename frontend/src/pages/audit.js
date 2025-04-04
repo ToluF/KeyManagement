@@ -14,6 +14,7 @@ export default function AuditLogs() {
   });
 
   useEffect(() => {
+    // Update the fetchLogs function in AuditLogs.js
     const fetchLogs = async () => {
       try {
         const query = new URLSearchParams({
@@ -22,11 +23,30 @@ export default function AuditLogs() {
         }).toString();
         
         const res = await fetch(`/api/audit?${query}`);
-        const { logs: data, totalPages: pages } = await res.json();
-        setLogs(data);
-        setTotalPages(pages);
+        
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
+        const responseData = await res.json();
+        
+        // Add validation for response structure
+        if (!responseData || !Array.isArray(responseData.logs)) {
+          throw new Error('Invalid response format');
+        }
+
+        const processed = responseData.logs.map(log => ({
+          ...log,
+          timestamp: new Date(log.timestamp).toISOString()
+        }));
+
+        setLogs(processed);
+        setTotalPages(responseData.totalPages || 1);
+        
       } catch (error) {
         console.error('Failed to fetch audit logs:', error);
+        setLogs([]);
+        setTotalPages(1);
       }
     };
 
@@ -44,14 +64,18 @@ export default function AuditLogs() {
   };
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return 'Invalid date';
+    }
   };
 
   return (

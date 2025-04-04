@@ -1,24 +1,23 @@
-// components/AddUserModal.js
-import { useState } from 'react';
+// components/EditUserModal.js
+import { useState, useEffect } from 'react';
 
-export default function AddUserModal({ isOpen, onClose, onAddUser }) {
-  const [newUser, setNewUser] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'user',
-    department: ''
-  });
+export default function EditUserModal({ user, isOpen, onClose, onUpdateUser }) {
+  const [editedUser, setEditedUser] = useState({});
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (user) {
+      setEditedUser({
+        ...user,
+        password: '' // Don't pre-fill password
+      });
+    }
+  }, [user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      if (!newUser.password) {
-        throw new Error('Password is required');
-      }
-      await onAddUser(newUser);
-      setNewUser({ name: '', email: '', password: '', role: 'user', department: '' });
+      await onUpdateUser(editedUser);
       onClose();
     } catch (err) {
       setError(err.message);
@@ -31,7 +30,7 @@ export default function AddUserModal({ isOpen, onClose, onAddUser }) {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
       <div className="bg-white p-6 rounded-lg w-full max-w-md">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Add New User</h2>
+          <h2 className="text-xl font-bold">Edit User</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700">✕</button>
         </div>
 
@@ -40,46 +39,44 @@ export default function AddUserModal({ isOpen, onClose, onAddUser }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"
-            placeholder="Full Name"
+            placeholder="Name"
             className="w-full px-4 py-2 border rounded-lg"
-            value={newUser.name}
-            onChange={e => setNewUser(p => ({ ...p, name: e.target.value }))}
+            value={editedUser.name || ''}
+            onChange={e => setEditedUser(p => ({ ...p, name: e.target.value }))}
             required
           />
           <input
             type="email"
             placeholder="Email"
             className="w-full px-4 py-2 border rounded-lg"
-            value={newUser.email}
-            onChange={e => setNewUser(p => ({ ...p, email: e.target.value }))}
+            value={editedUser.email || ''}
+            onChange={e => setEditedUser(p => ({ ...p, email: e.target.value }))}
             required
           />
           <input
             type="password"
-            placeholder="Password"
+            placeholder="New Password (leave blank to keep current)"
             className="w-full px-4 py-2 border rounded-lg"
-            value={newUser.password}
-            onChange={e => setNewUser(p => ({ ...p, password: e.target.value }))}
-            required
+            value={editedUser.password || ''}
+            onChange={e => setEditedUser(p => ({ ...p, password: e.target.value }))}
           />
           <select
             className="w-full px-4 py-2 border rounded-lg"
-            value={newUser.role}
-            onChange={e => setNewUser(p => ({ ...p, role: e.target.value }))}
-            required
+            value={editedUser.role || 'user'}
+            onChange={e => setEditedUser(p => ({ ...p, role: e.target.value }))}
           >
             <option value="user">User</option>
-            <option value="issuer">Key Issuer</option>
-            <option value="admin">Administrator</option>
+            <option value="issuer">Issuer</option>
+            <option value="admin">Admin</option>
           </select>
-          {newUser.role === 'user' && (
+          {editedUser.role === 'user' && (
             <input
               type="text"
               placeholder="Department"
               className="w-full px-4 py-2 border rounded-lg"
-              value={newUser.department}
-              onChange={e => setNewUser(p => ({ ...p, department: e.target.value }))}
-              required={newUser.role === 'user'}
+              value={editedUser.department || ''}
+              onChange={e => setEditedUser(p => ({ ...p, department: e.target.value }))}
+              required={editedUser.role === 'user'}
             />
           )}
           <div className="flex justify-end gap-2">
@@ -92,9 +89,9 @@ export default function AddUserModal({ isOpen, onClose, onAddUser }) {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
-              Add User
+              Save Changes
             </button>
           </div>
         </form>

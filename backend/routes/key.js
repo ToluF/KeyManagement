@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const key = require('../controllers/keys');
+const { protect, role } = require('../Middleware/authMiddleware');
+
 
 // POST /api/keys - Create new key
 router.post('/add', key.addKey);
@@ -15,10 +17,10 @@ router.get('/available', key.getAvailableKeys); // New route
 router.get('/search', key.searchKeys);
 
 // GET /api/keys/:id/history - Get key history
-router.get('/:id/history', key.getKeyHistory);
+router.get('/:id/history', protect, role('admin', 'issuer'), key.getKeyHistory);
 
 // PUT /api/keys/:id - Update key
-router.put('/:id', key.updateKey);
+router.put('/:id/update', protect, role('admin', 'issuer'), key.updateKey);
 
 // DELETE /api/keys/:id - Delete key
 router.delete('/:id', key.deleteKey);
