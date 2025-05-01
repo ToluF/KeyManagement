@@ -1,8 +1,10 @@
-// src/pages/KeyExchangeStatus.js
 import React, { useState, useEffect } from 'react';
-import TransactionWizard from '../components/TransactionWizard';
-import TransactionDetailsModal from '../components/TransactionDetailsModal';
-import TransactionStatusBadge from '../components/TransactionStatusBadge';
+
+import { useAuth } from '../AuthContext';
+import TransactionWizard from '../components/transactionComponents/TransactionWizard';
+import TransactionDetailsModal from '../components/transactionComponents/TransactionDetailsModal';
+import TransactionStatusBadge from '../components/transactionComponents/TransactionStatusBadge';
+import RequestModal from '../components/RequestModal';
 
 /**
  * Main view for managing key transactions
@@ -22,29 +24,11 @@ const KeyExchangeStatus = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
+  // Add state for requests
+  const [requests, setRequests] = useState([]);
+  const [showRequests, setShowRequests] = useState(false);
 
-  // // Update the filter logic
-  // const filteredTransactions = transactions.filter(transaction => {
-  //   const searchLower = searchQuery.toLowerCase();
-  //   const matchesSearch = 
-  //     transaction.transactionId?.toLowerCase().includes(searchLower) ||
-  //     transaction.user?.name?.toLowerCase().includes(searchLower);
 
-  //   const matchesStatus = statusFilter === 'all' 
-  //     ? true 
-  //     : statusFilter === 'completed' 
-  //       ? transaction.status === 'completed' || 
-  //         transaction.items.every(i => ['returned', 'lost'].includes(i.status))
-  //       : transaction.status === statusFilter;
-
-  //   return matchesSearch && matchesStatus;
-  // });
-
-  // Pagination calculations
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  // const currentTransactions = filteredTransactions.slice(indexOfFirstItem, indexOfLastItem);
-  // const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
 
   // Fetch transactions from new API endpoint
   const fetchTransactions = async (page = 1) => {
@@ -108,6 +92,29 @@ const KeyExchangeStatus = () => {
     }
   };
 
+  //  fetch requests function
+  const fetchRequests = async () => {
+    try {
+      const res = await fetch('/api/requests/issuer', {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      const data = await res.json();
+      setRequests(data);
+    } catch (error) {
+      console.error('Failed to fetch requests:', error);
+    }
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const showRequestsParam = params.get('showRequests');
+    
+    if (showRequestsParam === 'true') {
+      setShowRequests(true);
+      fetchRequests();
+    }
+  }, []);
+
   useEffect(() => {
     fetchTransactions(currentPage);
   }, [currentPage, searchQuery, statusFilter]);
@@ -120,6 +127,22 @@ const KeyExchangeStatus = () => {
 
     return () => clearTimeout(debounceTimer);
   }, [searchQuery, statusFilter]);
+
+  
+  useEffect(() => {
+    const ws = new WebSocket('ws://localhost:5000');
+  
+    ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      if (message.type === 'REQUEST_UPDATE') {
+        setRequests(prev => prev.map(r => 
+          r._id === message.data._id ? message.data : r
+        ));
+      }
+    };
+  
+    return () => ws.close();
+  }, []);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -178,6 +201,59 @@ const KeyExchangeStatus = () => {
     }
   };
 
+  // const handleApproveRequest = async (requestId) => {
+  //   try {
+  //     await fetch(`/api/requests/${requestId}`, {
+  //       method: 'PUT',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //         Authorization: `Bearer ${localStorage.getItem('token')}`
+  //       },
+  //       body: JSON.stringify({ status: 'approved' })
+  //     });
+  //     fetchRequests(); // Refresh the list
+  //   } catch (error) {
+  //     console.error('Approval failed:', error);
+  //   }
+  // };
+  
+  const handleRejectRequest = async (requestId) => {
+    try {
+      await fetch(`/api/requests/${requestId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ status: 'rejected' })
+      });
+      fetchRequests(); // Refresh the list
+    } catch (error) {
+      console.error('Rejection failed:', error);
+    }
+  };
+
+  const handleConvertRequest = async (requestId) => {
+    try {
+      const res = await fetch('/api/transactions/from-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ requestId })
+      });
+
+      if (!res.ok) throw new Error('Conversion failed');
+      
+      // Refresh both transactions and requests
+      await Promise.all([fetchTransactions(), fetchRequests()]);
+    } catch (error) {
+      console.error('Conversion error:', error);
+      alert(error.message);
+    }
+  };
+
   if (loading) return <div className="p-6 text-center">Loading transactions...</div>;
   if (error) return <div className="p-6 text-red-500">Error: {error}</div>;
 
@@ -185,12 +261,23 @@ const KeyExchangeStatus = () => {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Key Transactions</h1>
-        <button
-          onClick={() => setShowWizard(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          New Transaction
-        </button>
+        <div className="flex gap-4">
+          <button
+            onClick={() => {
+              setShowRequests(true);
+              fetchRequests();
+            }}
+            className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
+          >
+            View Requests ({requests.filter(r => r.status === 'pending').length})
+          </button>
+          <button
+            onClick={() => setShowWizard(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            New Transaction
+          </button>
+        </div>
       </div>
 
       {/* Search and Filter Section */}
@@ -274,7 +361,7 @@ const KeyExchangeStatus = () => {
                 </div>
                 <div className="text-right">
                   <TransactionStatusBadge status={transaction.status} />
-                  {/* ⬇️ Replace the existing keys count with this */}
+                 
                   <div className="mt-2">
                     <p className="text-sm">
                       {transaction.status === 'completed' ? (
@@ -293,7 +380,7 @@ const KeyExchangeStatus = () => {
               </div>
 
   
-              {/* ⬇️ Add this progress bar section */}
+         
               <div className="mt-3 h-2 bg-gray-200 rounded-full">
                 <div 
                   className="h-full rounded-full bg-blue-600 transition-all duration-300"
@@ -354,6 +441,20 @@ const KeyExchangeStatus = () => {
           onMarkLost={handleMarkLost}
         />
       )}
+
+      {showRequests && (
+        <RequestModal
+          requests={requests}
+          onClose={() => {
+            setShowRequests(false);
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }}
+          onConvert={handleConvertRequest}
+          onReject={handleRejectRequest}
+          initialRequestId={new URLSearchParams(window.location.search).get('requestId')}
+        />
+      )}
+
     </div>
   );
 };

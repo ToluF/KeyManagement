@@ -1,20 +1,13 @@
-// src/pages/Settings.js
 import { useState, useEffect } from 'react';
+import { useAuth } from '../AuthContext';
 
 export default function Settings() {
+  const { user } = useAuth();
   const [users, setUsers] = useState([]);
-  const [settings, setSettings] = useState({
-    keyCheckoutDuration: 7,
-    allowSelfCheckout: false,
-    notificationPreferences: {
-      email: true,
-      sms: false
-    }
-  });
+  const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Get token from localStorage
   const getAuthHeader = () => ({
     'Authorization': `Bearer ${localStorage.getItem('token')}`
   });
@@ -33,7 +26,7 @@ export default function Settings() {
         const usersData = await usersRes.json();
         const settingsData = await settingsRes.json();
 
-        setUsers(usersData.users || []); // Ensure array format
+        setUsers(usersData);
         setSettings(settingsData);
       } catch (error) {
         setError(error.message);
@@ -42,8 +35,13 @@ export default function Settings() {
       }
     };
     
-    fetchData();
-  }, []);
+    if (user?.role === 'admin') {
+      fetchData();
+    } else {
+      setError('Admin privileges required');
+      setLoading(false);
+    }
+  }, [user]);
 
   const updateUserRole = async (userId, newRole) => {
     try {
@@ -56,42 +54,28 @@ export default function Settings() {
         body: JSON.stringify({ role: newRole })
       });
       
-      if (!res.ok) throw new Error('Failed to update role');
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to update role');
+      }
       
       setUsers(prevUsers => 
         prevUsers.map(u => u._id === userId ? { ...u, role: newRole } : u)
       );
     } catch (error) {
-      console.error('Role update error:', error);
       alert(error.message);
     }
   };
 
-  const saveSettings = async () => {
-    try {
-      const res = await fetch('/api/settings', {
-        method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...getAuthHeader()
-        },
-        body: JSON.stringify(settings)
-      });
-      
-      if (!res.ok) throw new Error('Failed to save settings');
-      alert('Settings saved successfully');
-    } catch (error) {
-      console.error('Save settings error:', error);
-      alert(error.message);
-    }
-  };
+  if (!user || user.role !== 'admin') {
+    return <div className="p-6 text-red-500">Admin access required</div>;
+  }
 
   if (loading) return <div className="p-6 text-center">Loading settings...</div>;
   if (error) return <div className="p-6 text-red-500">Error: {error}</div>;
 
   return (
     <div className="p-6 space-y-8">
-      {/* User Management */}
       <div className="bg-white p-6 rounded-lg shadow-sm">
         <h2 className="text-xl font-bold mb-4">User Management</h2>
         <div className="space-y-4">
@@ -103,14 +87,18 @@ export default function Settings() {
                 <div>
                   <p className="font-medium">{user.name}</p>
                   <p className="text-sm text-gray-600">{user.email}</p>
+                  {user.department && (
+                    <p className="text-sm text-gray-500">{user.department}</p>
+                  )}
                 </div>
                 <select
-                  value={user.role || 'user'}
+                  value={user.role}
                   onChange={(e) => updateUserRole(user._id, e.target.value)}
                   className="border rounded-lg p-2"
+                  disabled={user._id === user.id} // Prevent self-modification
                 >
                   <option value="admin">Admin</option>
-                  <option value="manager">Manager</option>
+                  <option value="issuer">Issuer</option>
                   <option value="user">User</option>
                 </select>
               </div>
@@ -118,8 +106,6 @@ export default function Settings() {
           )}
         </div>
       </div>
-
-      {/* System Settings - Keep existing JSX but add error handling */}
     </div>
   );
 }

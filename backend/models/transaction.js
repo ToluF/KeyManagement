@@ -54,6 +54,16 @@ const transactionSchema = new mongoose.Schema({
     timestamp: Date,
     performedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
   }],
+  source: {
+    type: String,
+    enum: ['manual', 'request'],
+    default: 'manual',
+    required: true
+  },
+  relatedRequest: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Request'
+  },
   expectedReturn: Date
 }, { timestamps: true });
 
@@ -61,6 +71,38 @@ const transactionSchema = new mongoose.Schema({
 transactionSchema.index({ checkoutDate: -1 });
 transactionSchema.index({ 'items.status': 1 });
 transactionSchema.index({ _id: 1, status: 1 }); // Compound index for faster lookups
+
+transactionSchema.pre('findOneAndUpdate', async function(next) {
+  const update = this.getUpdate();
+  
+  if (update.$set?.status === 'completed') {
+    const session = this.getOptions().session;
+    const doc = await this.model.findOne(this.getFilter()).session(session);
+
+    // Atomic update of keys and transaction items
+    await Promise.all([
+      Key.updateMany(
+        { _id: { $in: doc.items.map(i => i.key) } },
+        { 
+          $set: { status: 'available' },
+          $unset: { currentTransaction: 1 }
+        },
+        { session }
+      ),
+      
+      this.model.updateOne(
+        { _id: doc._id },
+        { 
+          $set: { 
+            'items.$[].status': 'returned',
+            status: 'completed'
+          }
+        }
+      ).session(session)
+    ]);
+  }
+  next();
+});
 
 transactionSchema.pre('find', function() {
   this.where({
@@ -89,6 +131,18 @@ transactionSchema.virtual('isCompleted').get(function() {
 //   }
 //   next();
 // });
+transactionSchema.pre('findOneAndUpdate', async function(next) {
+  const update = this.getUpdate();
+  
+  if (update.$set?.status === 'completed') {
+    const doc = await this.model.findOne(this.getFilter());
+    await Key.updateMany(
+      { _id: { $in: doc.items.map(i => i.key) } },
+      { $set: { status: 'available', currentTransaction: null } }
+    );
+  }
+  next();
+});
 
 transactionSchema.pre('save', function(next) {
   if (this.status === 'completed' && this.items.some(i => i.status === 'checked-out')) {
@@ -108,22 +162,19 @@ transactionSchema.pre('save', function(next) {
   next();
 });
 
-// In transaction model
 transactionSchema.post('save', async function(doc) {
   try {
-    // Verify key status consistency
-    const Key = mongoose.model('Key');
-    const keys = await Key.find({
-      _id: { $in: doc.items.map(i => i.key) }
-    });
-  
-    keys.forEach(key => {
-      if (doc.status === 'completed' && key.status !== 'available') {
-        console.warn(`Key ${key._id} inconsistency detected`);
-      }
-    });
+    if (doc.status === 'completed') {
+      await Key.updateMany(
+        { _id: { $in: doc.items.map(i => i.key) } },
+        { 
+          $set: { status: 'available' },
+          $unset: { currentTransaction: 1 }
+        }
+      );
+    }
   } catch (error) {
-    console.error('Key status check failed:', error);
+    console.error('Transaction completion cleanup failed:', error);
   }
 });
 

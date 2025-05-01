@@ -20,7 +20,7 @@ export function AuthProvider({ children }) {
             method: 'GET',
             headers: {
               Authorization: `Bearer ${token}`,
-              'Cache-Control': 'no-cache' // Add this to prevent 304
+              'Cache-Control': 'no-cache' // Add to prevent 304
             }
           });
           
@@ -52,12 +52,19 @@ export function AuthProvider({ children }) {
         throw new Error(data.error || 'Login failed');
       }
 
+      // Modify navigation based on role
+      let redirectPath = '/dashboard';
+      if (data.user.role === 'issuer') {
+        redirectPath = '/exchange';
+      } else if (data.user.role === 'user') {
+        redirectPath = '/dashboard';
+      }
       
       // Store both token and user
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       setUser(data.user);
-      navigate(data.user.role === 'admin' ? '/dashboard' : '/exchange'); // Navigate to the desired page
+      navigate(redirectPath); // Navigate to the desired page
       
       return true;
     } catch (error) {

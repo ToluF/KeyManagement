@@ -12,8 +12,17 @@ const keySchema = new mongoose.Schema({
   location: String,
   status: {
     type: String,
-    enum: ['available', 'checked-out', 'lost'],
+    required: true,
+    enum: ['available', 'reserved', 'checked-out', 'lost', 'unavailable'],
     default: 'available'
+  },
+  reservationExpiry: {
+    type: Date,
+    index: { expires: '24h' } // Auto-expire reservations after 24 hours
+  },
+  reservedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   },
   createdAt: {
     type: Date,
@@ -23,19 +32,24 @@ const keySchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Transaction',
   },
-  transactionHistory: [{
-    transaction: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Transaction'
-    },
-    status: String,
-    date: {
-      type: Date,
-      default: Date.now
-    }
-  }]
+  transactionHistory: {
+    type: [{
+      transaction: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Transaction'
+      },
+      status: String,
+      date: {
+        type: Date,
+        default: Date.now
+      }
+    }],
+    default: []
+  }
 });
 keySchema.index({ currentTransaction: 1 });
+keySchema.index({ status: 1 });
+keySchema.index({ 'transactionHistory.request': 1 });
 
 //1. Keep the currentTransaction -> status sync
 keySchema.pre('save', async function(next) {
@@ -52,15 +66,25 @@ keySchema.pre('save', async function(next) {
 // 2. Add the new validation hook (modified to handle original status correctly)
 keySchema.pre('save', async function(next) {
   if (this.isModified('status')) {
+     // Force-clear transaction reference when marking available
+    if (this.status === 'available') {
+      this.currentTransaction = undefined;
+       
+      // Additional cleanup for any transaction references
+      await this.constructor.updateOne(
+        { _id: this._id },
+        { $unset: { currentTransaction: 1 } }
+      );
+    }
+
     // Check for active transactions
-    const activeTransaction = await Transaction.findOne({
-      'items.key': this._id,
-      status: 'active'
+    const existingTransaction = await Transaction.findOne({
+      'items.key': this._id
     });
 
-    if (activeTransaction) {
+    if (existingTransaction) {
       return next(new Error(
-        `Cannot modify key status - it's part of active transaction ${activeTransaction.transactionId}`
+        `Key ${this.keyCode} is referenced in transaction ${existingTransaction.transactionId}`
       ));
     }
 
@@ -75,9 +99,10 @@ keySchema.pre('save', async function(next) {
 
     // Validate status transitions
     const validTransitions = {
-      'available': ['checked-out', 'lost'],
-      'checked-out': ['available', 'lost'],
-      'lost': ['available']
+      'available': ['checked-out', 'lost', 'unavailable'],
+      'unavailable': ['available'],
+      'checked-out': ['available', 'lost','unavailable'],
+      'lost': ['available', 'unavailable']
     };
 
     if (!validTransitions[originalStatus]?.includes(this.status)) {
@@ -121,5 +146,48 @@ keySchema.post('save', async function(doc, next) {
   next();
 });
 
+// Add periodic sync method
+keySchema.statics.syncTransactionStates = async function() {
+  await this.updateMany(
+    {
+      status: "available",
+      currentTransaction: { $exists: true }
+    },
+    {
+      $unset: { currentTransaction: 1 }
+    }
+  );
+  console.log('Key transaction states synchronized');
+};
+
+keySchema.statics.reconcileKeyStates = async function() {
+  const mismatchedKeys = await this.find({
+    $or: [
+      { status: 'available', currentTransaction: { $exists: true } },
+      { status: 'checked-out', currentTransaction: { $exists: false } }
+    ]
+  });
+
+  for (const key of mismatchedKeys) {
+    if (key.status === 'available') {
+      await this.findByIdAndUpdate(
+        key._id,
+        { $unset: { currentTransaction: 1 } }
+      );
+    } else {
+      const transaction = await Transaction.findOne({
+        'items.key': key._id,
+        status: 'active'
+      });
+      
+      if (transaction) {
+        await this.findByIdAndUpdate(
+          key._id,
+          { currentTransaction: transaction._id }
+        );
+      }
+    }
+  }
+};
 
 module.exports = mongoose.model('Key', keySchema);

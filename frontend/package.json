@@ -4,24 +4,33 @@
   "private": true,
   "proxy": "http://localhost:5000",
   "dependencies": {
+    "@headlessui/react": "^2.2.2",
     "@heroicons/react": "^1.0.6",
     "chart.js": "^4.4.8",
     "cra-template": "1.2.0",
     "date-fns": "^4.1.0",
+    "jspdf": "^2.5.1",
+    "jspdf-autotable": "^3.5.28",
+    "leaflet": "^1.9.4",
+    "next": "^15.2.5",
     "react": "^19.0.0",
     "react-chartjs-2": "^5.3.0",
     "react-csv": "^2.2.2",
-    "react-datepicker": "^8.2.1",
     "react-dom": "^19.0.0",
+    "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.1.5",
     "react-scripts": "5.0.1",
-    "recharts": "^2.15.1"
+    "react-toastify": "^11.0.5",
+    "react-virtualized-auto-sizer": "^1.0.26",
+    "react-window": "^1.8.11",
+    "recharts": "^2.15.2"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "fix-datepicker": "rimraf node_modules/react-datepicker/dist && npm install react-datepicker"
   },
   "eslintConfig": {
     "extends": [
@@ -46,6 +55,7 @@
     "autoprefixer": "^10.4.20",
     "postcss": "^8.5.2",
     "postcss-loader": "^8.1.1",
+    "rimraf": "^6.0.1",
     "tailwindcss": "^4.0.6"
   }
 }

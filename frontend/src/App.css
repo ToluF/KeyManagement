@@ -13,6 +13,14 @@
   }
 }
 
+/* Ensure header accounts for sidebar */
+@media (min-width: 1024px) {
+  .sidebar-active-header {
+    width: calc(100% - 16rem);
+    left: 16rem;
+  }
+}
+  
 .App-header {
   background-color: #282c34;
   min-height: 100vh;
@@ -34,6 +42,17 @@
   border-radius: 8px;
   padding: 1rem;
   margin: 1rem 0;
+}
+
+/* In your main CSS file */
+.csv-link {
+  display: inline-block;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.csv-link:hover {
+  opacity: 0.9;
 }
 
 .status-available { color: green; }

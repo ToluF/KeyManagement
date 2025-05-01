@@ -1,5 +1,6 @@
 // backend/server.js
 // require('./Middleware/polyfills');
+const WebSocket = require('ws');
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -11,16 +12,18 @@ const keyRoutes = require('./routes/key');
 const userRoutes = require('./routes/users');
 const loginRoutes = require('./routes/loginRoute');
 // const exchangeRoutes = require('./routes/keyExchange');
-const lookupsRoute = require("./routes/lookups")
 const auditRoutes = require('./routes/audit');
 const settingsRoutes = require('./routes/settings');
 const transactions = require('./routes/transactionRoutes');
 const reports = require('./routes/reports');
+const request = require('./routes/requestRoutes');
 const Key = require('./models/keys'); // Assuming Mongoose models
 // const analyticsRoutes = require('./routes/analyticsRoutes');
 
 const app = express();
 const port = process.env.PORT || 5000;
+// Create WebSocket server
+const wss = new WebSocket.Server({ noServer: true });
 
 // Middleware to parse JSON bodies
 app.use(express.json());
@@ -34,7 +37,6 @@ app.use(cors({
 connectDB().then(() => {
   app.use('/api/auth', loginRoutes);
   app.use('/api/keys', keyRoutes);
-  app.use('/api/lookups', lookupsRoute);
   app.use('/api/users', userRoutes);
   // app.use('/api/exchange', exchangeRoutes);
   app.use('/api/audit', auditRoutes);
@@ -42,6 +44,7 @@ connectDB().then(() => {
   // New transaction system
   app.use('/api/transactions', transactions);
   app.use('/api/reports', reports);
+  app.use('/api/requests', request);
 
   // Health check
   app.get('/api/health', (req, res) => {
@@ -82,43 +85,6 @@ connectDB().then(() => {
     }
   });
 
-  // app.get('/analytics', async (req, res) => {
-  //   try {
-  //     const keys = await Key.find();
-  //     const users = await User.find();
-  
-  //     // Compute statistics
-  //     const totalKeys = keys.length;
-  //     const availableKeys = keys.filter(k => k.status === 'available').length;
-  //     const issuedKeys = keys.filter(k => k.assignedTo).length;
-  
-  //     // Status distribution for the chart
-  //     const statusDistribution = [
-  //       { label: 'Available', value: availableKeys },
-  //       { label: 'Issued', value: issuedKeys },
-  //       { label: 'Lost', value: keys.filter(k => k.status === 'lost').length }
-  //     ];
-  
-  //     // Fetch recent checkouts (last 5 transactions)
-  //     const recentActivity = keys
-  //       .filter(k => k.assignedTo)
-  //       .slice(-5) // Assuming the latest transactions are at the end
-  //       .map(k => ({
-  //         userName: users.find(u => u._id.toString() === k.assignedTo.toString())?.name || 'Unknown',
-  //         keyName: k.name
-  //       }));
-  
-  //     res.json({
-  //       totalKeys,
-  //       availableKeys,
-  //       issuedKeys,
-  //       statusDistribution,
-  //       recentActivity
-  //     });
-  //   } catch (error) {
-  //     res.status(500).json({ error: 'Server error' });
-  //   }
-  // });
 
   // Error handling middleware
   app.use((err, req, res, next) => {
@@ -126,9 +92,17 @@ connectDB().then(() => {
     res.status(500).json({ error: 'Internal Server Error' });
   });
 
-  app.listen(port, () => {
+  const server = app.listen(port, () => {
     console.log(`Server running on port ${port}`);
   });
+  // Handle WebSocket upgrade
+server.on('upgrade', (request, socket, head) => {
+  wss.handleUpgrade(request, socket, head, ws => {
+    wss.emit('connection', ws, request);
+  });
+});
+
+
 }).catch(error => {
   console.error('❌ MongoDB connection failed:', error);
   process.exit(1);

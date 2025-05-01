@@ -1,4 +1,3 @@
-// src/pages/AuditLogs.js
 import { useState, useEffect } from 'react';
 // import { format } from 'date-fns';
 

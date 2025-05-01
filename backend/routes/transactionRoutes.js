@@ -6,14 +6,18 @@ const mongoose = require('mongoose');
 const transactionCtrl = require('../controllers/transactionController');
 const { protect, role } = require('../Middleware/authMiddleware');
 const { logAction } = require('../Middleware/auditLogger');
-const { validateObjectIds } = require('../Middleware/validateIds');
+const { validateDraft, verifyKeyStates } = require('../controllers/transactionController');
+const { validateTransactionId} = require('../Middleware/validateIds');
 // routes/transactionRoutes.js
 // Add this at the top of the router
 router.get('/getId', 
     protect, 
     role('admin', 'issuer'), // Allow all authenticated roles
     transactionCtrl.getTransactions
-  );
+);
+
+router.get('/trends', transactionCtrl.getTransactionTrends);
+router.get('/recent-activity', transactionCtrl.getRecentActivity);
 router.post('/', 
   protect, 
   role('admin', 'issuer'),
@@ -38,11 +42,11 @@ router.post('/:id/items',
     }
     next();
   },
-  protect, role('admin', 'issuer'), transactionCtrl.validateDraft, transactionCtrl.addTransactionItems);
+  protect, role('admin', 'issuer'), validateDraft, verifyKeyStates, transactionCtrl.addTransactionItems);
   // transactionRoutes.js
 router.get('/:id', 
   protect,
-  role('admin', 'issuer'),
+  role('admin', 'issuer'), validateTransactionId,
   transactionCtrl.getTransactionById
 );
 router.post('/:id/checkout', protect, role('admin', 'issuer'), logAction('key_checkout'), transactionCtrl.finalizeTransaction);
@@ -51,7 +55,9 @@ router.delete('/:id/delete', protect, role('admin', 'issuer'), transactionCtrl.d
 router.post('/mark-lost', protect, role('admin', 'issuer'), logAction('key_lost'), transactionCtrl.markKeyLost);
 router.post('/validate-keys', protect, role('admin', 'issuer'), transactionCtrl.validateKeys);
 router.get('/history/:keyId', protect, role('admin', 'issuer'), transactionCtrl.getKeyHistory);
-router.get('/analytics', protect, role('admin', 'issuer'), validateObjectIds, transactionCtrl.getAnalyticsData);
+router.post('/from-request', protect, role('admin', 'issuer'), logAction('transaction_create'), transactionCtrl.createTransactionFromRequest);
+// router.get('/analytics', protect, transactionCtrl.getAnalyticsData)
+
 // Add to transactionRoutes.js
 router.post('/:id/verify-key-status', 
   protect,
@@ -75,5 +81,43 @@ router.param('id', (req, res, next, id) => {
   }
   next();
 });
+// Add this temporary diagnostic route
+router.get('/diagnostics/check-keys', async (req, res) => {
+  const invalidTransactions = await Transaction.aggregate([
+    {
+      $project: {
+        invalidKeys: {
+          $filter: {
+            input: "$items.key",
+            as: "key",
+            cond: { $not: { $eq: [{ $type: "$$key" }, "objectId"] } }
+          }
+        }
+      }
+    },
+    { $match: { invalidKeys: { $ne: [] } } }
+  ]);
 
+  res.json({
+    invalidTransactionCount: invalidTransactions.length,
+    sampleInvalid: invalidTransactions.slice(0, 3)
+  });
+});
+
+// Validate key IDs in request bodies
+router.use('/:id*', (req, res, next) => {
+  if (req.body.keyIds) {
+    const invalidIds = req.body.keyIds.filter(
+      id => !mongoose.Types.ObjectId.isValid(id)
+    );
+    
+    if (invalidIds.length > 0) {
+      return res.status(400).json({
+        error: 'Invalid key IDs',
+        invalidIds
+      });
+    }
+  }
+  next();
+});
 module.exports = router;

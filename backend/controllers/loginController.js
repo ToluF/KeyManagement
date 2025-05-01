@@ -79,7 +79,7 @@ exports.login = async (req, res) => {
     }
 
     // Only issue tokens to admin/issuer
-    if (!['admin', 'issuer'].includes(user.role)) {
+    if (!['admin', 'issuer','user'].includes(user.role)) {
       return res.status(403).json({ 
         error: 'System access requires admin/issuer privileges' 
       });
@@ -96,6 +96,7 @@ exports.login = async (req, res) => {
       token,
       user: {
         id: user._id,
+        name: user.name,
         email: user.email,
         role: user.role
       }

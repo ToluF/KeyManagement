@@ -7,6 +7,7 @@
 const Transaction = require('../models/transaction');
 const Key = require('../models/keys');
 const User = require('../models/user');
+const Request = require('../models/Request');
 const mongoose = require('mongoose');
 
 /**
@@ -114,6 +115,11 @@ exports.createTransaction = async (req, res) => {
       issuer: req.user.id
     });
 
+     // Validate input
+     if (!req.body.userId || !mongoose.Types.ObjectId.isValid(req.body.userId)) {
+      return res.status(400).json({ error: 'Valid user ID required' });
+    }
+
     // Validate user exists
     const user = await User.findById(req.body.userId);
     if (!user) {
@@ -149,6 +155,69 @@ exports.createTransaction = async (req, res) => {
       error: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
      });
+  }
+};
+
+// In transactionController.js
+exports.createTransactionFromRequest = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { requestId } = req.body;
+    const request = await Request.findById(requestId)
+      .populate('user keys')
+      .session(session);
+
+    if (!request || request.status !== 'pending') {
+      throw new Error('Invalid or already processed request');
+    }
+
+    // Create transaction
+    const transaction = await Transaction.create([{
+      user: request.user._id,
+      issuer: req.user.id,
+      items: request.keys.map(key => ({
+        key: key._id,
+        status: 'checked-out'
+      })),
+      status: 'active',
+      source: 'request',
+      relatedRequest: request._id,
+      checkoutDate: new Date()
+    }], { session });
+
+    // Update keys
+    await Key.updateMany(
+      { _id: { $in: request.keys.map(k => k._id) } },
+      {
+        status: 'checked-out',
+        currentTransaction: transaction[0]._id,
+        $push: {
+          transactionHistory: {
+            transaction: transaction[0]._id,
+            status: 'checked-out',
+            date: new Date()
+          }
+        }
+      },
+      { session }
+    );
+
+    // Update request status
+    await Request.findByIdAndUpdate(
+      requestId,
+      { status: 'approved' },
+      { session }
+    );
+
+    await session.commitTransaction();
+    res.json(transaction[0]);
+  } catch (error) {
+    await session.abortTransaction();
+    res.status(400).json({ error: error.message });
+  } finally {
+    session.endSession();
   }
 };
 
@@ -241,8 +310,15 @@ exports.validateKeys = async (req, res) => {
   try {
     const keys = await Key.find({
       _id: { $in: req.body.keyIds },
-      status: 'available',
-      currentTransaction: { $exists: false }
+      $and: [
+        { status: 'available' },
+        {
+          $or: [
+            { currentTransaction: { $exists: false } },
+            { currentTransaction: null }
+          ]
+        }
+      ]
     });
 
     const validKeyIds = keys.map(k => k._id.toString());
@@ -293,7 +369,23 @@ exports.finalizeTransaction = async (req, res) => {
     ).populate('items.key');
 
     if (!transaction) {
+      await session.abortTransaction();
       return res.status(404).json({ error: 'Draft transaction not found' });
+    }
+
+    // Add request check here
+    const keyIds = transaction.items.map(i => i.key._id);
+    const pendingRequests = await Request.find({
+      keys: { $in: keyIds },
+      status: 'pending'
+    }).session(session);
+
+    if (pendingRequests.length > 0) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        error: 'Cannot checkout keys with pending requests',
+        pendingRequests: pendingRequests.map(r => r._id)
+      });
     }
 
     // Add key status validation
@@ -321,13 +413,28 @@ exports.finalizeTransaction = async (req, res) => {
       }, { session })
     );
 
-    await Promise.all(keyUpdates);
+    // Verify all updates succeeded
+    const results = await Promise.all(keyUpdates);
+    const failedUpdates = results.filter(r => !r);
+    
+    if (failedUpdates.length > 0) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        error: `Failed to update ${failedUpdates.length} keys`
+      });
+    }
+
     await session.commitTransaction();
 
+      // Refresh transaction data
+    const updatedTransaction = await Transaction.findById(transaction._id)
+      .populate('items.key')
+      .session(session);
+
     res.json({
-      status: transaction.status,
-      transactionId: transaction.transactionId,
-      checkoutDate: transaction.checkoutDate
+      status: updatedTransaction.status,
+      transactionId: updatedTransaction.transactionId,
+      checkoutDate: updatedTransaction.checkoutDate
     });
   } catch (error) {
     await session.abortTransaction();
@@ -344,6 +451,12 @@ exports.returnKey = async (req, res) => {
 
   try {
     const { transactionId, keyId } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(transactionId) || 
+        !mongoose.Types.ObjectId.isValid(keyId)) {
+      throw new Error('Invalid ID format');
+    }
+
 
     // 1. Update transaction item status atomically
     const transaction = await Transaction.findOneAndUpdate(
@@ -520,99 +633,47 @@ exports.getKeyHistory = async (req, res) => {
   }
 };
 
-exports.getAnalyticsData = async (req, res) => {
+exports.getTransactionTrends = async (req, res) => {
   try {
-    const [keyStats, recentTransactions] = await Promise.all([
-      Key.aggregate([
-        {
-          $group: {
-            _id: null,
-            totalKeys: { $sum: 1 },
-            availableKeys: { $sum: { $cond: [{ $eq: ["$status", "available"] }, 1, 0] } },
-            issuedKeys: { $sum: { $cond: [{ $eq: ["$status", "checked-out"] }, 1, 0] } }
-          }
-        },
-        { $project: { _id: 0 } }
-      ]),
-      Transaction.aggregate([
-        { $match: { 
-          user: { $exists: true, $type: 'objectId' },
-          'items.key': { $exists: true, $type: 'objectId' } 
-        }},
-        { $sort: { createdAt: -1 } },
-        { $limit: 5 },
-        { $lookup: {
-          from: 'users',
-          localField: 'user',
-          foreignField: '_id',
-          as: 'user'
-        }},
-        { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
-        { $project: {
-          'user.name': 1,
-          createdAt: 1,
-          items: { $slice: ['$items', 1] } // Get first item only
-        }}
-      ])
-    ]);
+    const pipeline = [
+      { $match: { checkoutDate: { $exists: true }, status: 'active' } },
+      { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$checkoutDate" } }, count: { $sum: 1 } } },
+      { $sort: { _id: 1 } },
+      { $limit: 30 },
+      { $project: { date: "$_id", count: 1, _id: 0 } }
+    ];
 
-    const result = {
-      totalKeys: keyStats[0]?.totalKeys || 0,
-      availableKeys: keyStats[0]?.availableKeys || 0,
-      issuedKeys: keyStats[0]?.issuedKeys || 0,
-      recentActivity: recentTransactions.map(tx => ({
-        _id: tx._id.toString(),
-        userName: tx.user?.name || 'System',
-        keyCode: tx.items[0]?.key?.toString() || 'Unknown',
-        date: tx.createdAt
-      }))
-    };
 
-    res.json(result);
+    const trends = await Transaction.aggregate(pipeline);
+ 
+
+    res.json({ data: trends, success: true });
   } catch (error) {
-    console.error('Analytics error:', error);
-    res.status(500).json({ 
-      error: 'Failed to generate analytics',
-      ...(process.env.NODE_ENV === 'development' && { details: error.message })
-    });
+    res.status(500).json({ error: error.message });
   }
 };
 
-// exports.getAnalyticsData = async (req, res) => {
-//   try {
-//     const [transactions, keys] = await Promise.all([
-//       Transaction.aggregate([
-//         { $unwind: '$items' },
-//         { 
-//           $group: {
-//             _id: '$status',
-//             count: { $sum: 1 },
-//             keys: { $addToSet: '$items.key' }
-//           }
-//         }
-//       ]),
-//       Key.find().lean()
-//     ]);
+exports.getRecentActivity = async (req, res) => {
+  try {
+    const activity = await Transaction.find()
+      .sort({ checkoutDate: -1 })
+      .limit(10)
+      .populate('items.key', 'keyCode status')
+      .populate('user', 'name')
+      .lean();
 
-//     const statusDistribution = transactions.reduce((acc, curr) => {
-//       acc[curr._id] = {
-//         count: curr.count,
-//         keys: curr.keys.length
-//       };
-//       return acc;
-//     }, {});
-
-//     res.json({
-//       totalKeys: keys.length,
-//       statusDistribution,
-//       recentTransactions: transactions
-//         .sort((a, b) => b.checkoutDate - a.checkoutDate)
-//         .slice(0, 5)
-//     });
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// };
+    res.json({ 
+      success: true,
+      data: activity 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error',
+      details: error.message 
+    });
+  }
+};
 
 exports.deleteTransaction = async (req, res) => {
   try {
@@ -631,5 +692,86 @@ exports.deleteTransaction = async (req, res) => {
     res.json({ message: 'Transaction deleted' });
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+};
+
+// controllers/transactionController.js
+exports.confirmReservation = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const transaction = await Transaction.findById(req.params.id)
+      .populate('items.key')
+      .session(session);
+
+    // Verify all keys are still reserved
+    const reservedKeys = await Key.find({
+      _id: { $in: transaction.items.map(i => i.key._id) },
+      status: 'reserved'
+    }).session(session);
+
+    if (reservedKeys.length !== transaction.items.length) {
+      throw new Error('Some keys are no longer available');
+    }
+
+    // Update to active transaction
+    const updatedTransaction = await Transaction.findByIdAndUpdate(
+      req.params.id,
+      {
+        status: 'active',
+        'items.$[].status': 'checked-out',
+        checkoutDate: new Date()
+      },
+      { new: true, session }
+    );
+
+    // Update keys to checked-out
+    await Key.updateMany(
+      { _id: { $in: transaction.items.map(i => i.key._id) } },
+      {
+        status: 'checked-out',
+        $unset: { reservationExpiry: 1 }
+      },
+      { session }
+    );
+
+    await session.commitTransaction();
+    res.json(updatedTransaction);
+  } catch (error) {
+    await session.abortTransaction();
+    res.status(400).json({ error: error.message });
+  } finally {
+    session.endSession();
+  }
+};
+
+// Add to transactionController.js
+exports.verifyKeyStates = async (req, res, next) => {
+  const session = await mongoose.startSession();
+  try {
+    const { keyIds } = req.body;
+    
+    const validKeys = await Key.find({
+      _id: { $in: keyIds },
+      status: 'available',
+      currentTransaction: { $exists: false }
+    }).session(session).lean();
+
+    if (validKeys.length !== keyIds.length) {
+      const invalidKeys = keyIds.filter(id => 
+        !validKeys.some(k => k._id.equals(id))
+      );
+      return res.status(400).json({
+        error: 'Key states changed during request',
+        invalidKeys
+      });
+    }
+    
+    next();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  } finally {
+    session.endSession();
   }
 };
