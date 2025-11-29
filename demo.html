@@ -1,0 +1,1573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electronic Key Locker Management System - Interactive Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --dark-color: #1f2937;
+            --light-gray: #f3f4f6;
+            --border-color: #e5e7eb;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: var(--primary-color);
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header-icon {
+            font-size: 1.2em;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .tab-button {
+            padding: 12px 24px;
+            border: 2px solid var(--border-color);
+            background: white;
+            color: var(--dark-color);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-button:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        .tab-button.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        /* Content Sections */
+        .content-section {
+            display: none;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-title {
+            color: var(--dark-color);
+            font-size: 2em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid var(--primary-color);
+        }
+
+        /* Role Cards */
+        .role-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .role-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .role-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .role-card h3 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .role-card ul {
+            list-style: none;
+        }
+
+        .role-card li {
+            padding: 8px 0;
+            display: flex;
+            align-items: start;
+            gap: 10px;
+        }
+
+        .role-card li::before {
+            content: '✓';
+            background: rgba(255,255,255,0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        /* Features Grid */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .feature-card {
+            background: var(--light-gray);
+            padding: 25px;
+            border-radius: 12px;
+            border-left: 4px solid var(--primary-color);
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            background: white;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            transform: translateX(5px);
+        }
+
+        .feature-card h3 {
+            color: var(--primary-color);
+            font-size: 1.3em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Interactive Demo */
+        .demo-container {
+            background: var(--light-gray);
+            border-radius: 12px;
+            padding: 30px;
+            margin: 30px 0;
+        }
+
+        .demo-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .demo-button {
+            padding: 12px 24px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .demo-button:hover {
+            background: #1d4ed8;
+            transform: scale(1.05);
+        }
+
+        .demo-button.success {
+            background: var(--secondary-color);
+        }
+
+        .demo-button.success:hover {
+            background: #059669;
+        }
+
+        .demo-button.danger {
+            background: var(--danger-color);
+        }
+
+        .demo-button.danger:hover {
+            background: #dc2626;
+        }
+
+        /* Data Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .data-table th {
+            background: var(--primary-color);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .data-table td {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table tr:hover {
+            background: var(--light-gray);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-available {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-checked-out {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-lost {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-active {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .status-completed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        /* Workflow Diagram */
+        .workflow {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .workflow-step {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            background: var(--light-gray);
+            border-radius: 12px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .workflow-step-number {
+            background: var(--primary-color);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            flex-shrink: 0;
+        }
+
+        .workflow-step-content {
+            flex: 1;
+        }
+
+        .workflow-step-content h4 {
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+
+        /* Code Block */
+        .code-block {
+            background: #1f2937;
+            color: #10b981;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .code-block .comment {
+            color: #6b7280;
+        }
+
+        .code-block .keyword {
+            color: #8b5cf6;
+        }
+
+        .code-block .string {
+            color: #fbbf24;
+        }
+
+        /* Statistics Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-top: 4px solid var(--primary-color);
+        }
+
+        .stat-number {
+            font-size: 3em;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 1em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Architecture Diagram */
+        .architecture-diagram {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin: 30px 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .architecture-layer {
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid var(--border-color);
+        }
+
+        .architecture-layer h4 {
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .architecture-components {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .component-badge {
+            background: var(--light-gray);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Footer */
+        .footer {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-top: 30px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .footer-link {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+        .footer-link:hover {
+            color: #1d4ed8;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .nav-tabs {
+                flex-direction: column;
+            }
+
+            .tab-button {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .demo-controls {
+                flex-direction: column;
+            }
+
+            .demo-button {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        /* Alert Messages */
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-info {
+            background: #dbeafe;
+            border-left: 4px solid #2563eb;
+            color: #1e40af;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            border-left: 4px solid #10b981;
+            color: #065f46;
+        }
+
+        .alert-warning {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            color: #92400e;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-close {
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .modal-close:hover {
+            color: var(--danger-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>
+                <span class="header-icon">🔐</span>
+                Electronic Key Locker Management System
+            </h1>
+            <p>Interactive Demo & Feature Showcase</p>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="nav-tabs">
+            <button class="tab-button active" onclick="showTab('overview')">
+                📊 Overview
+            </button>
+            <button class="tab-button" onclick="showTab('features')">
+                ✨ Features
+            </button>
+            <button class="tab-button" onclick="showTab('roles')">
+                👥 User Roles
+            </button>
+            <button class="tab-button" onclick="showTab('workflow')">
+                🔄 Workflows
+            </button>
+            <button class="tab-button" onclick="showTab('demo')">
+                🎮 Interactive Demo
+            </button>
+            <button class="tab-button" onclick="showTab('architecture')">
+                🏗️ Architecture
+            </button>
+            <button class="tab-button" onclick="showTab('api')">
+                🔌 API Examples
+            </button>
+            <button class="tab-button" onclick="showTab('installation')">
+                ⚙️ Installation
+            </button>
+        </div>
+
+        <!-- Overview Section -->
+        <div id="overview" class="content-section active">
+            <h2 class="section-title">System Overview</h2>
+            
+            <div class="alert alert-info">
+                <span>ℹ️</span>
+                <div>
+                    <strong>What is this?</strong> A comprehensive full-stack MERN application for managing electronic key lockers in office complexes, featuring role-based access control, transaction tracking, and request workflows.
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Keys</div>
+                    <div class="stat-number">150</div>
+                    <p>Managed Keys</p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Active Users</div>
+                    <div class="stat-number">45</div>
+                    <p>System Users</p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Transactions</div>
+                    <div class="stat-number">328</div>
+                    <p>Total Checkouts</p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Pending</div>
+                    <div class="stat-number">7</div>
+                    <p>Key Requests</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 40px; margin-bottom: 20px;">Technology Stack</h3>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <h3>⚛️ Frontend</h3>
+                    <ul style="list-style: none; padding: 0;">
+                        <li>• React 19</li>
+                        <li>• React Router v7</li>
+                        <li>• Tailwind CSS</li>
+                        <li>• Chart.js</li>
+                        <li>• Context API</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h3>🔧 Backend</h3>
+                    <ul style="list-style: none; padding: 0;">
+                        <li>• Node.js</li>
+                        <li>• Express.js</li>
+                        <li>• MongoDB</li>
+                        <li>• Mongoose ODM</li>
+                        <li>• JWT Auth</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h3>🔒 Security</h3>
+                    <ul style="list-style: none; padding: 0;">
+                        <li>• JWT Tokens</li>
+                        <li>• Bcrypt Hashing</li>
+                        <li>• RBAC</li>
+                        <li>• Audit Logging</li>
+                        <li>• Input Validation</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div id="features" class="content-section">
+            <h2 class="section-title">Core Features</h2>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <h3>🔑 Key Management</h3>
+                    <p>Complete CRUD operations for key inventory with status tracking, location management, and history logs.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>📊 Transaction Tracking</h3>
+                    <p>Draft-based workflow with atomic checkout/return operations and comprehensive transaction history.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>📝 Request System</h3>
+                    <p>User-initiated key requests with approval workflow, messaging, and direct transaction creation.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>👥 User Management</h3>
+                    <p>Three-tier role system (Admin, Issuer, User) with department organization and secure authentication.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>📈 Analytics Dashboard</h3>
+                    <p>Real-time statistics, visual charts, transaction trends, and activity monitoring.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>📄 Reports Export</h3>
+                    <p>Generate custom reports with date filtering and export to CSV or PDF formats.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🔍 Audit Trail</h3>
+                    <p>Complete action logging with user attribution, timestamps, and metadata storage.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>⚙️ System Settings</h3>
+                    <p>Configurable checkout duration, notification preferences, and auto-logout settings.</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 40px; margin-bottom: 20px;">Sample Keys Inventory</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Key Code</th>
+                        <th>Description</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th>Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>KEY001</strong></td>
+                        <td>Office 101 Master Key</td>
+                        <td>Building A, Floor 1</td>
+                        <td><span class="status-badge status-available">Available</span></td>
+                        <td>Master</td>
+                    </tr>
+                    <tr>
+                        <td><strong>KEY002</strong></td>
+                        <td>Conference Room Alpha</td>
+                        <td>Building B, Floor 2</td>
+                        <td><span class="status-badge status-checked-out">Checked Out</span></td>
+                        <td>Access</td>
+                    </tr>
+                    <tr>
+                        <td><strong>KEY003</strong></td>
+                        <td>Server Room Access</td>
+                        <td>Building A, Floor 3</td>
+                        <td><span class="status-badge status-available">Available</span></td>
+                        <td>Security</td>
+                    </tr>
+                    <tr>
+                        <td><strong>KEY004</strong></td>
+                        <td>Storage Unit 5</td>
+                        <td>Building C, Basement</td>
+                        <td><span class="status-badge status-lost">Lost</span></td>
+                        <td>Storage</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Roles Section -->
+        <div id="roles" class="content-section">
+            <h2 class="section-title">User Roles & Permissions</h2>
+
+            <div class="role-cards">
+                <div class="role-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    <h3>🔴 Admin</h3>
+                    <p style="margin-bottom: 15px; opacity: 0.9;">Full system access and control</p>
+                    <ul>
+                        <li>Manage all keys (CRUD)</li>
+                        <li>Create & manage transactions</li>
+                        <li>Manage all users</li>
+                        <li>Approve/reject requests</li>
+                        <li>View audit logs</li>
+                        <li>Generate reports</li>
+                        <li>Configure settings</li>
+                        <li>Access all features</li>
+                    </ul>
+                </div>
+
+                <div class="role-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                    <h3>🟡 Issuer</h3>
+                    <p style="margin-bottom: 15px; opacity: 0.9;">Key checkout management</p>
+                    <ul>
+                        <li>Create transactions</li>
+                        <li>Issue & return keys</li>
+                        <li>View key inventory (read-only)</li>
+                        <li>Approve/reject requests</li>
+                        <li>View dashboard analytics</li>
+                        <li><s>Cannot modify inventory</s></li>
+                        <li><s>Cannot manage users</s></li>
+                        <li><s>Cannot access settings</s></li>
+                    </ul>
+                </div>
+
+                <div class="role-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                    <h3>🟢 User</h3>
+                    <p style="margin-bottom: 15px; opacity: 0.9;">Basic access for key requests</p>
+                    <ul>
+                        <li>Submit key requests</li>
+                        <li>View request history</li>
+                        <li>View personal dashboard</li>
+                        <li>Message with issuers</li>
+                        <li><s>Cannot access inventory</s></li>
+                        <li><s>Cannot create transactions</s></li>
+                        <li><s>Cannot access admin features</s></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Workflow Section -->
+        <div id="workflow" class="content-section">
+            <h2 class="section-title">System Workflows</h2>
+
+            <h3 style="margin-bottom: 20px;">Manual Key Checkout Workflow</h3>
+            <div class="workflow">
+                <div class="workflow-step">
+                    <div class="workflow-step-number">1</div>
+                    <div class="workflow-step-content">
+                        <h4>Create Draft Transaction</h4>
+                        <p>Admin/Issuer creates a new draft transaction and selects the user who will receive the keys.</p>
+                    </div>
+                </div>
+                <div class="workflow-step">
+                    <div class="workflow-step-number">2</div>
+                    <div class="workflow-step-content">
+                        <h4>Add Keys to Transaction</h4>
+                        <p>Select available keys from inventory and add them to the transaction. System validates availability.</p>
+                    </div>
+                </div>
+                <div class="workflow-step">
+                    <div class="workflow-step-number">3</div>
+                    <div class="workflow-step-content">
+                        <h4>Finalize Checkout</h4>
+                        <p>Complete the transaction. Keys are marked as "checked-out" and transaction becomes active.</p>
+                    </div>
+                </div>
+                <div class="workflow-step">
+                    <div class="workflow-step-number">4</div>
+                    <div class="workflow-step-content">
+                        <h4>Return Keys</h4>
+                        <p>When user returns keys, issuer marks them as returned. Keys become available again.</p>
+                    </div>
+                </div>
+                <div class="workflow-step">
+                    <div class="workflow-step-number">5</div>
+                    <div class="workflow-step-content">
+                        <h4>Complete Transaction</h4>
+                        <p>When all keys are returned, transaction is automatically marked as completed.</p>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 40px; margin-bottom: 20px;">Request-Based Workflow</h3>
+            <div class="workflow">
+                <div class="workflow-step">
+                    <div class="workflow-step-number">1</div>
+                    <div class="workflow-step-content">
+                        <h4>User Submits Request</h4>
+                        <p>Regular user selects needed keys, provides purpose, and suggests pickup times.</p>
+                    </div>
+                </div>
+                <div class="workflow-step">
+                    <div class="workflow-step-number">2</div>
+                    <div class="workflow-step-content">
+                        <h4>Request Review</h4>
+                        <p>Admin/Issuer receives notification and reviews the request details.</p>
+                    </div>
+                </div>
+                <div class="workflow-step">
+                    <div class="workflow-step-number">3</div>
+                    <div class="workflow-step-content">
+                        <h4>Approval & Transaction</h4>
+                        <p>Upon approval, system automatically creates an active transaction and checks out keys.</p>
+                    </div>
+                </div>
+                <div class="workflow-step">
+                    <div class="workflow-step-number">4</div>
+                    <div class="workflow-step-content">
+                        <h4>Key Return</h4>
+                        <p>Standard return process follows same as manual workflow.</p>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 40px; margin-bottom: 20px;">Sample Transactions</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Transaction ID</th>
+                        <th>User</th>
+                        <th>Keys</th>
+                        <th>Checkout Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>TXN-789456</strong></td>
+                        <td>John Doe</td>
+                        <td>KEY001, KEY003</td>
+                        <td>2024-01-15 10:30 AM</td>
+                        <td><span class="status-badge status-active">Active</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>TXN-789123</strong></td>
+                        <td>Jane Smith</td>
+                        <td>KEY005</td>
+                        <td>2024-01-14 02:15 PM</td>
+                        <td><span class="status-badge status-completed">Completed</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>TXN-788999</strong></td>
+                        <td>Bob Wilson</td>
+                        <td>KEY007, KEY008, KEY009</td>
+                        <td>2024-01-13 09:00 AM</td>
+                        <td><span class="status-badge status-active">Active</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Interactive Demo Section -->
+        <div id="demo" class="content-section">
+            <h2 class="section-title">Interactive Demo</h2>
+
+            <div class="alert alert-warning">
+                <span>⚠️</span>
+                <div>
+                    <strong>Note:</strong> This is a frontend-only demo. No actual API calls are made. Use the buttons below to simulate different actions.
+                </div>
+            </div>
+
+            <div class="demo-container">
+                <h3>Simulate Key Checkout</h3>
+                <div class="demo-controls">
+                    <button class="demo-button" onclick="simulateCreateTransaction()">
+                        📝 Create Transaction
+                    </button>
+                    <button class="demo-button" onclick="simulateAddKeys()">
+                        ➕ Add Keys
+                    </button>
+                    <button class="demo-button success" onclick="simulateCheckout()">
+                        ✅ Checkout
+                    </button>
+                    <button class="demo-button success" onclick="simulateReturn()">
+                        🔄 Return Key
+                    </button>
+                    <button class="demo-button danger" onclick="simulateMarkLost()">
+                        ❌ Mark Lost
+                    </button>
+                </div>
+                <div id="demo-output" style="background: white; padding: 20px; border-radius: 8px; min-height: 200px; margin-top: 20px;">
+                    <p style="color: #666; text-align: center;">Click a button above to see the simulated action</p>
+                </div>
+            </div>
+
+            <div class="demo-container" style="margin-top: 30px;">
+                <h3>Request System Demo</h3>
+                <div class="demo-controls">
+                    <button class="demo-button" onclick="simulateSubmitRequest()">
+                        📨 Submit Request
+                    </button>
+                    <button class="demo-button success" onclick="simulateApproveRequest()">
+                        ✅ Approve Request
+                    </button>
+                    <button class="demo-button danger" onclick="simulateRejectRequest()">
+                        ❌ Reject Request
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Architecture Section -->
+        <div id="architecture" class="content-section">
+            <h2 class="section-title">System Architecture</h2>
+
+            <div class="architecture-diagram">
+                <div class="architecture-layer" style="background: #dbeafe;">
+                    <h4>Frontend Layer (React)</h4>
+                    <div class="architecture-components">
+                        <span class="component-badge">Dashboard</span>
+                        <span class="component-badge">Transactions</span>
+                        <span class="component-badge">Key Inventory</span>
+                        <span class="component-badge">Requests</span>
+                        <span class="component-badge">Users</span>
+                        <span class="component-badge">Reports</span>
+                        <span class="component-badge">Auth Context</span>
+                        <span class="component-badge">Protected Routes</span>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin: 20px 0; font-size: 24px; color: var(--primary-color);">
+                    ↕ REST API (JSON)
+                </div>
+
+                <div class="architecture-layer" style="background: #d1fae5;">
+                    <h4>Backend Layer (Node.js + Express)</h4>
+                    <div class="architecture-components">
+                        <span class="component-badge">Authentication</span>
+                        <span class="component-badge">Authorization (RBAC)</span>
+                        <span class="component-badge">Transaction Controller</span>
+                        <span class="component-badge">Key Controller</span>
+                        <span class="component-badge">User Controller</span>
+                        <span class="component-badge">Request Controller</span>
+                        <span class="component-badge">Audit Logger</span>
+                        <span class="component-badge">Validation Middleware</span>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin: 20px 0; font-size: 24px; color: var(--primary-color);">
+                    ↕ Mongoose ODM
+                </div>
+
+                <div class="architecture-layer" style="background: #fef3c7;">
+                    <h4>Database Layer (MongoDB)</h4>
+                    <div class="architecture-components">
+                        <span class="component-badge">Users Collection</span>
+                        <span class="component-badge">Keys Collection</span>
+                        <span class="component-badge">Transactions Collection</span>
+                        <span class="component-badge">Requests Collection</span>
+                        <span class="component-badge">Audit Logs Collection</span>
+                        <span class="component-badge">Settings Collection</span>
+                    </div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 40px; margin-bottom: 20px;">Data Flow Example: Key Checkout</h3>
+            <div class="code-block">
+<span class="comment">// 1. Frontend sends request</span>
+<span class="keyword">fetch</span>(<span class="string">'/api/transactions'</span>, {
+  method: <span class="string">'POST'</span>,
+  headers: { 
+    <span class="string">'Authorization'</span>: <span class="string">'Bearer &lt;token&gt;'</span>,
+    <span class="string">'Content-Type'</span>: <span class="string">'application/json'</span>
+  },
+  body: JSON.stringify({ userId: <span class="string">'user-id'</span> })
+})
+
+<span class="comment">// 2. Backend validates JWT token</span>
+<span class="keyword">const</span> decoded = jwt.verify(token, JWT_SECRET)
+
+<span class="comment">// 3. Check user permissions (RBAC)</span>
+<span class="keyword">if</span> (!['admin', 'issuer'].includes(user.role)) {
+  <span class="keyword">return</span> res.status(403).json({ error: <span class="string">'Forbidden'</span> })
+}
+
+<span class="comment">// 4. Create transaction in MongoDB</span>
+<span class="keyword">const</span> transaction = <span class="keyword">await</span> Transaction.create({
+  user: userId,
+  issuer: currentUser.id,
+  status: <span class="string">'draft'</span>
+})
+
+<span class="comment">// 5. Log action in audit trail</span>
+<span class="keyword">await</span> AuditLog.create({
+  actionType: <span class="string">'transaction_create'</span>,
+  user: currentUser.id,
+  timestamp: <span class="keyword">new</span> Date()
+})
+            </div>
+        </div>
+
+        <!-- API Section -->
+        <div id="api" class="content-section">
+            <h2 class="section-title">API Examples</h2>
+
+            <h3>Authentication</h3>
+            <div class="code-block">
+<span class="comment">// Login Request</span>
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  <span class="string">"email"</span>: <span class="string">"admin@example.com"</span>,
+  <span class="string">"password"</span>: <span class="string">"securePassword123"</span>
+}
+
+<span class="comment">// Response</span>
+{
+  <span class="string">"token"</span>: <span class="string">"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."</span>,
+  <span class="string">"user"</span>: {
+    <span class="string">"id"</span>: <span class="string">"507f1f77bcf86cd799439011"</span>,
+    <span class="string">"name"</span>: <span class="string">"Admin User"</span>,
+    <span class="string">"email"</span>: <span class="string">"admin@example.com"</span>,
+    <span class="string">"role"</span>: <span class="string">"admin"</span>
+  }
+}
+            </div>
+
+            <h3 style="margin-top: 30px;">Create Transaction</h3>
+            <div class="code-block">
+<span class="comment">// Step 1: Create Draft</span>
+POST /api/transactions
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{
+  <span class="string">"userId"</span>: <span class="string">"507f1f77bcf86cd799439011"</span>
+}
+
+<span class="comment">// Response</span>
+{
+  <span class="string">"id"</span>: <span class="string">"507f191e810c19729de860ea"</span>,
+  <span class="string">"transactionId"</span>: <span class="string">"TXN-789456"</span>,
+  <span class="string">"status"</span>: <span class="string">"draft"</span>
+}
+
+<span class="comment">// Step 2: Add Keys</span>
+POST /api/transactions/507f191e810c19729de860ea/items
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{
+  <span class="string">"keyIds"</span>: [
+    <span class="string">"507f1f77bcf86cd799439012"</span>,
+    <span class="string">"507f1f77bcf86cd799439013"</span>
+  ]
+}
+
+<span class="comment">// Step 3: Finalize Checkout</span>
+POST /api/transactions/507f191e810c19729de860ea/checkout
+Authorization: Bearer &lt;token&gt;
+
+<span class="comment">// Response</span>
+{
+  <span class="string">"status"</span>: <span class="string">"active"</span>,
+  <span class="string">"transactionId"</span>: <span class="string">"TXN-789456"</span>,
+  <span class="string">"checkoutDate"</span>: <span class="string">"2024-01-15T10:30:00Z"</span>
+}
+            </div>
+
+            <h3 style="margin-top: 30px;">Return Key</h3>
+            <div class="code-block">
+POST /api/transactions/return
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{
+  <span class="string">"transactionId"</span>: <span class="string">"507f191e810c19729de860ea"</span>,
+  <span class="string">"keyId"</span>: <span class="string">"507f1f77bcf86cd799439012"</span>
+}
+
+<span class="comment">// Response</span>
+{
+  <span class="string">"transaction"</span>: {
+    <span class="string">"_id"</span>: <span class="string">"507f191e810c19729de860ea"</span>,
+    <span class="string">"status"</span>: <span class="string">"active"</span>,
+    <span class="string">"items"</span>: [
+      {
+        <span class="string">"key"</span>: <span class="string">"507f1f77bcf86cd799439012"</span>,
+        <span class="string">"status"</span>: <span class="string">"returned"</span>
+      }
+    ]
+  },
+  <span class="string">"key"</span>: {
+    <span class="string">"_id"</span>: <span class="string">"507f1f77bcf86cd799439012"</span>,
+    <span class="string">"keyCode"</span>: <span class="string">"KEY001"</span>,
+    <span class="string">"status"</span>: <span class="string">"available"</span>
+  }
+}
+            </div>
+
+            <h3 style="margin-top: 30px;">Submit Key Request</h3>
+            <div class="code-block">
+POST /api/requests
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{
+  <span class="string">"keys"</span>: [
+    <span class="string">"507f1f77bcf86cd799439012"</span>,
+    <span class="string">"507f1f77bcf86cd799439013"</span>
+  ],
+  <span class="string">"purpose"</span>: <span class="string">"Maintenance work in server room"</span>,
+  <span class="string">"preferredDates"</span>: [
+    {
+      <span class="string">"date"</span>: <span class="string">"2024-01-20"</span>,
+      <span class="string">"timeSlot"</span>: <span class="string">"09:00 AM - 11:00 AM"</span>
+    },
+    {
+      <span class="string">"date"</span>: <span class="string">"2024-01-21"</span>,
+      <span class="string">"timeSlot"</span>: <span class="string">"02:00 PM - 04:00 PM"</span>
+    }
+  ]
+}
+
+<span class="comment">// Response</span>
+{
+  <span class="string">"_id"</span>: <span class="string">"507f191e810c19729de860eb"</span>,
+  <span class="string">"status"</span>: <span class="string">"pending"</span>,
+  <span class="string">"createdAt"</span>: <span class="string">"2024-01-15T10:30:00Z"</span>
+}
+            </div>
+        </div>
+
+        <!-- Installation Section -->
+        <div id="installation" class="content-section">
+            <h2 class="section-title">Installation Guide</h2>
+
+            <div class="alert alert-info">
+                <span>ℹ️</span>
+                <div>
+                    <strong>Prerequisites:</strong> Node.js v16+, MongoDB v4.4+, npm v7+
+                </div>
+            </div>
+
+            <h3>1. Clone Repository</h3>
+            <div class="code-block">
+git clone &lt;repository-url&gt;
+cd webapp
+            </div>
+
+            <h3>2. Install Dependencies</h3>
+            <div class="code-block">
+<span class="comment"># Backend dependencies</span>
+cd backend
+npm install
+
+<span class="comment"># Frontend dependencies</span>
+cd ../frontend
+npm install
+            </div>
+
+            <h3>3. Configure Environment</h3>
+            <div class="code-block">
+<span class="comment"># Create backend/.env file</span>
+MONGODB_URI=mongodb://localhost:27017/keymanager
+PORT=5000
+JWT_SECRET=your-super-secret-jwt-key-change-this
+NODE_ENV=development
+            </div>
+
+            <h3>4. Start Development Servers</h3>
+            <div class="code-block">
+<span class="comment"># Terminal 1 - Backend (runs on port 5000)</span>
+cd backend
+npm run dev
+
+<span class="comment"># Terminal 2 - Frontend (runs on port 3000)</span>
+cd frontend
+npm start
+            </div>
+
+            <h3>5. Access Application</h3>
+            <div class="code-block">
+<span class="comment"># Frontend URL</span>
+http://localhost:3000
+
+<span class="comment"># Backend API URL</span>
+http://localhost:5000
+
+<span class="comment"># Health Check</span>
+http://localhost:5000/api/health
+            </div>
+
+            <div class="alert alert-success" style="margin-top: 30px;">
+                <span>✅</span>
+                <div>
+                    <strong>Success!</strong> Your application should now be running. Create an admin user to get started.
+                </div>
+            </div>
+
+            <h3 style="margin-top: 40px;">Production Deployment</h3>
+            <div class="code-block">
+<span class="comment"># Build frontend for production</span>
+cd frontend
+npm run build
+
+<span class="comment"># Start backend in production mode</span>
+cd ../backend
+NODE_ENV=production npm start
+
+<span class="comment"># Or use PM2 for process management</span>
+npm install -g pm2
+pm2 start server.js --name "key-locker-api"
+pm2 save
+pm2 startup
+            </div>
+
+            <h3 style="margin-top: 40px;">Docker Deployment</h3>
+            <div class="code-block">
+<span class="comment"># Using Docker Compose</span>
+docker-compose up -d
+
+<span class="comment"># View logs</span>
+docker-compose logs -f
+
+<span class="comment"># Stop containers</span>
+docker-compose down
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <h3>🔐 Electronic Key Locker Management System</h3>
+            <p style="margin-top: 10px; color: #666;">
+                Built with ❤️ using MERN Stack<br>
+                Version 1.0.0 - 2024
+            </p>
+            <div class="footer-links">
+                <a href="#" class="footer-link" onclick="showTab('overview'); return false;">📊 Overview</a>
+                <a href="#" class="footer-link" onclick="showTab('features'); return false;">✨ Features</a>
+                <a href="#" class="footer-link" onclick="showTab('api'); return false;">🔌 API Docs</a>
+                <a href="README.md" class="footer-link" target="_blank">📖 Full Documentation</a>
+                <a href="https://github.com" class="footer-link" target="_blank">💻 GitHub</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab Navigation
+        function showTab(tabId) {
+            // Hide all sections
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+
+            // Show selected section
+            document.getElementById(tabId).classList.add('active');
+
+            // Add active class to clicked button
+            event.target.classList.add('active');
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Demo Functions
+        function simulateCreateTransaction() {
+            const output = document.getElementById('demo-output');
+            output.innerHTML = `
+                <div class="alert alert-success">
+                    <span>✅</span>
+                    <div>
+                        <strong>Transaction Created!</strong><br>
+                        Transaction ID: TXN-${Math.floor(Math.random() * 1000000)}<br>
+                        Status: Draft<br>
+                        User: John Doe<br>
+                        Issuer: Admin User<br>
+                        Created: ${new Date().toLocaleString()}
+                    </div>
+                </div>
+                <div style="margin-top: 20px;">
+                    <strong>Next Steps:</strong>
+                    <ul style="margin-top: 10px;">
+                        <li>Add keys to the transaction</li>
+                        <li>Review selected keys</li>
+                        <li>Finalize the checkout</li>
+                    </ul>
+                </div>
+            `;
+        }
+
+        function simulateAddKeys() {
+            const output = document.getElementById('demo-output');
+            const keys = ['KEY001', 'KEY003', 'KEY007'];
+            output.innerHTML = `
+                <div class="alert alert-success">
+                    <span>✅</span>
+                    <div>
+                        <strong>Keys Added to Transaction!</strong><br>
+                        ${keys.length} keys selected
+                    </div>
+                </div>
+                <table class="data-table" style="margin-top: 20px;">
+                    <thead>
+                        <tr>
+                            <th>Key Code</th>
+                            <th>Description</th>
+                            <th>Location</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${keys.map((key, i) => `
+                            <tr>
+                                <td><strong>${key}</strong></td>
+                                <td>Office ${101 + i} Key</td>
+                                <td>Building A</td>
+                                <td><span class="status-badge status-pending">Reserved</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function simulateCheckout() {
+            const output = document.getElementById('demo-output');
+            output.innerHTML = `
+                <div class="alert alert-success">
+                    <span>✅</span>
+                    <div>
+                        <strong>Checkout Successful!</strong><br>
+                        Transaction Status: Active<br>
+                        Keys Checked Out: 3<br>
+                        Checkout Date: ${new Date().toLocaleString()}<br>
+                        Expected Return: ${new Date(Date.now() + 7*24*60*60*1000).toLocaleDateString()}
+                    </div>
+                </div>
+                <div style="margin-top: 20px; padding: 20px; background: #f3f4f6; border-radius: 8px;">
+                    <strong>📋 Transaction Summary:</strong>
+                    <ul style="margin-top: 10px;">
+                        <li>User: John Doe (IT Department)</li>
+                        <li>Issuer: Admin User</li>
+                        <li>Keys: KEY001, KEY003, KEY007</li>
+                        <li>Status: ✅ Active</li>
+                    </ul>
+                </div>
+            `;
+        }
+
+        function simulateReturn() {
+            const output = document.getElementById('demo-output');
+            output.innerHTML = `
+                <div class="alert alert-success">
+                    <span>✅</span>
+                    <div>
+                        <strong>Key Returned Successfully!</strong><br>
+                        Key Code: KEY001<br>
+                        Return Date: ${new Date().toLocaleString()}<br>
+                        Key Status: Available
+                    </div>
+                </div>
+                <div style="margin-top: 20px; padding: 20px; background: #dbeafe; border-radius: 8px;">
+                    <strong>📊 Transaction Update:</strong>
+                    <ul style="margin-top: 10px;">
+                        <li>Returned: 1 of 3 keys</li>
+                        <li>Remaining: KEY003, KEY007</li>
+                        <li>Transaction Status: Active</li>
+                    </ul>
+                    <p style="margin-top: 10px; color: #1e40af;">
+                        💡 <em>Transaction will auto-complete when all keys are returned.</em>
+                    </p>
+                </div>
+            `;
+        }
+
+        function simulateMarkLost() {
+            const output = document.getElementById('demo-output');
+            output.innerHTML = `
+                <div class="alert alert-warning">
+                    <span>⚠️</span>
+                    <div>
+                        <strong>Key Marked as Lost</strong><br>
+                        Key Code: KEY007<br>
+                        Date: ${new Date().toLocaleString()}<br>
+                        Action: Lost key logged in system
+                    </div>
+                </div>
+                <div style="margin-top: 20px; padding: 20px; background: #fee2e2; border-radius: 8px;">
+                    <strong>⚠️ Lost Key Procedure:</strong>
+                    <ul style="margin-top: 10px; color: #991b1b;">
+                        <li>Key status changed to "Lost"</li>
+                        <li>Security team notified</li>
+                        <li>Replacement process initiated</li>
+                        <li>Transaction continues for other keys</li>
+                    </ul>
+                    <p style="margin-top: 10px;">
+                        📝 <em>Key remains in system for audit purposes.</em>
+                    </p>
+                </div>
+            `;
+        }
+
+        function simulateSubmitRequest() {
+            const output = document.getElementById('demo-output');
+            output.innerHTML = `
+                <div class="alert alert-success">
+                    <span>✅</span>
+                    <div>
+                        <strong>Request Submitted Successfully!</strong><br>
+                        Request ID: REQ-${Math.floor(Math.random() * 1000000)}<br>
+                        Status: Pending Approval<br>
+                        Submitted: ${new Date().toLocaleString()}
+                    </div>
+                </div>
+                <div style="margin-top: 20px; padding: 20px; background: #f3f4f6; border-radius: 8px;">
+                    <strong>📝 Request Details:</strong>
+                    <ul style="margin-top: 10px;">
+                        <li><strong>User:</strong> John Doe</li>
+                        <li><strong>Keys Requested:</strong> KEY001, KEY003</li>
+                        <li><strong>Purpose:</strong> Server maintenance</li>
+                        <li><strong>Preferred Date:</strong> ${new Date(Date.now() + 2*24*60*60*1000).toLocaleDateString()}</li>
+                        <li><strong>Time Slot:</strong> 09:00 AM - 11:00 AM</li>
+                    </ul>
+                    <p style="margin-top: 15px; color: #666;">
+                        🔔 Admin/Issuer will be notified of your request.
+                    </p>
+                </div>
+            `;
+        }
+
+        function simulateApproveRequest() {
+            const output = document.getElementById('demo-output');
+            output.innerHTML = `
+                <div class="alert alert-success">
+                    <span>✅</span>
+                    <div>
+                        <strong>Request Approved & Transaction Created!</strong><br>
+                        Transaction ID: TXN-${Math.floor(Math.random() * 1000000)}<br>
+                        Status: Active (Keys Checked Out)<br>
+                        Approved by: Admin User<br>
+                        Date: ${new Date().toLocaleString()}
+                    </div>
+                </div>
+                <div style="margin-top: 20px; padding: 20px; background: #d1fae5; border-radius: 8px;">
+                    <strong>✅ Automated Actions Completed:</strong>
+                    <ol style="margin-top: 10px; color: #065f46;">
+                        <li>Request status: Pending → Approved</li>
+                        <li>Transaction created automatically</li>
+                        <li>Keys checked out to user</li>
+                        <li>User notified of approval</li>
+                        <li>Audit log updated</li>
+                    </ol>
+                </div>
+            `;
+        }
+
+        function simulateRejectRequest() {
+            const output = document.getElementById('demo-output');
+            output.innerHTML = `
+                <div class="alert alert-warning">
+                    <span>❌</span>
+                    <div>
+                        <strong>Request Rejected</strong><br>
+                        Reason: Keys not available for requested dates<br>
+                        Rejected by: Admin User<br>
+                        Date: ${new Date().toLocaleString()}
+                    </div>
+                </div>
+                <div style="margin-top: 20px; padding: 20px; background: #fef3c7; border-radius: 8px;">
+                    <strong>📋 Next Steps:</strong>
+                    <ul style="margin-top: 10px; color: #92400e;">
+                        <li>User notified of rejection</li>
+                        <li>Suggested alternative dates provided</li>
+                        <li>User can submit new request</li>
+                        <li>Request history preserved</li>
+                    </ul>
+                </div>
+            `;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔐 Electronic Key Locker Management System - Demo Loaded');
+        });
+    </script>
+</body>
+</html>
